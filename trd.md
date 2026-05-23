@@ -40,10 +40,14 @@ No database is required for the MVP.
 promptcompiler/
   __init__.py
   analyzer.py
+  cli.py
   compiler.py
+  diff.py
   entities.py
+  models.py
   nim.py
   parser.py
+  samples.py
   server.py
   tokenizer.py
 web/
@@ -54,7 +58,9 @@ tests/
   test_analyzer.py
   test_compiler.py
   test_entities.py
+  test_models_and_api.py
   test_nim.py
+  test_server.py
 README.md
 prd.md
 trd.md
@@ -173,6 +179,8 @@ The NIM client:
 - Defaults to `openai/gpt-oss-20b`, configurable by request.
 - Uses low temperature for compression tasks.
 - Returns a structured error if the key is missing.
+- Builds an SSL context from `certifi` when available so Python framework installs on macOS can verify NVIDIA TLS certificates.
+- Returns preservation results showing whether protected entities survived summarization.
 
 NIM summarization prompts must instruct the model to:
 
@@ -185,6 +193,14 @@ NIM summarization prompts must instruct the model to:
 ### `GET /api/health`
 
 Returns app status and whether NIM is configured.
+
+### `GET /api/models`
+
+Returns the built-in model registry and default model.
+
+### `GET /api/samples`
+
+Returns built-in sample prompts for support chats, agent logs, and RAG overlap.
 
 ### `POST /api/analyze`
 
@@ -212,6 +228,10 @@ Request:
 
 Response: compile result.
 
+### `POST /api/export`
+
+Returns optimized text plus the full compile report for browser export workflows.
+
 ### `POST /api/nim/summarize`
 
 Request:
@@ -228,11 +248,24 @@ Response:
 ```json
 {
   "summary": "compressed text",
-  "model": "openai/gpt-oss-20b"
+  "model": "openai/gpt-oss-20b",
+  "preservation": {
+    "ok": true,
+    "checked_entities": [],
+    "missing_entities": []
+  }
 }
 ```
 
-## 11. Testing Requirements
+## 11. CLI
+
+```bash
+python3 -m promptcompiler.cli models
+python3 -m promptcompiler.cli analyze prompt.json
+python3 -m promptcompiler.cli compile prompt.json --out optimized.txt
+```
+
+## 12. Testing Requirements
 
 Unit tests must cover:
 
@@ -246,8 +279,12 @@ Unit tests must cover:
 - Tool/log line compaction.
 - NIM missing-key behavior.
 - NIM request payload construction.
+- NIM SSL context usage.
+- NIM preservation reporting.
+- Model and sample API endpoints.
+- CLI analyze and compile flows.
 
-## 12. Verification Commands
+## 13. Verification Commands
 
 ```bash
 python3 -m unittest discover -s tests

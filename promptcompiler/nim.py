@@ -5,13 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
+import ssl
 import urllib.error
 import urllib.request
 from typing import Any
 
+from .entities import extract_entities
+from .models import DEFAULT_NIM_MODEL
+
 
 DEFAULT_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_NIM_MODEL = "openai/gpt-oss-20b"
 
 
 class NimConfigError(RuntimeError):
@@ -76,7 +79,7 @@ class NimClient:
         )
 
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=60, context=_ssl_context()) as response:
                 body = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
@@ -90,12 +93,40 @@ class NimClient:
         except (KeyError, IndexError, TypeError) as exc:
             raise NimRequestError("NIM response did not include choices[0].message.content") from exc
 
+        preservation = _check_preservation(text, summary)
+
         return {
             "summary": summary,
             "model": payload["model"],
+            "preservation": preservation,
             "raw": parsed,
         }
 
 
 def nim_is_configured() -> bool:
     return bool(os.environ.get("NVIDIA_API_KEY", "").strip())
+
+
+def _ssl_context() -> ssl.SSLContext:
+    cafile = _certifi_cafile()
+    if cafile:
+        return ssl.create_default_context(cafile=cafile)
+    return ssl.create_default_context()
+
+
+def _certifi_cafile() -> str | None:
+    try:
+        import certifi  # type: ignore
+    except Exception:
+        return None
+    return str(certifi.where())
+
+
+def _check_preservation(original: str, summary: str) -> dict[str, Any]:
+    original_entities = extract_entities(original)
+    missing = [entity for entity in original_entities if entity not in summary]
+    return {
+        "ok": not missing,
+        "checked_entities": original_entities,
+        "missing_entities": missing,
+    }

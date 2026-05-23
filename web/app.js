@@ -3,8 +3,12 @@ const modelInput = document.querySelector("#modelInput");
 const analyzeButton = document.querySelector("#analyzeButton");
 const compileButton = document.querySelector("#compileButton");
 const sampleButton = document.querySelector("#sampleButton");
+const sampleSelect = document.querySelector("#sampleSelect");
+const importInput = document.querySelector("#importInput");
 const nimButton = document.querySelector("#nimButton");
 const copyButton = document.querySelector("#copyButton");
+const exportJsonButton = document.querySelector("#exportJsonButton");
+const exportTextButton = document.querySelector("#exportTextButton");
 const errorBox = document.querySelector("#errorBox");
 const nimStatus = document.querySelector("#nimStatus");
 const metrics = document.querySelector("#metrics");
@@ -13,38 +17,25 @@ const entities = document.querySelector("#entities");
 const segmentsBody = document.querySelector("#segmentsBody");
 const optimizedOutput = document.querySelector("#optimizedOutput");
 const changes = document.querySelector("#changes");
+const diffView = document.querySelector("#diffView");
 
 let lastCompile = null;
-
-const samplePayload = {
-  messages: [
-    {
-      role: "system",
-      content: "@pin Follow policy CASE-123. Never remove this instruction.",
-    },
-    {
-      role: "user",
-      content: "The customer reported device failure on 2026-05-23.",
-    },
-    {
-      role: "tool",
-      content:
-        "ERROR same failure\nERROR same failure\nERROR same failure\nShipping URL: https://example.com/rma/CASE-123",
-    },
-    {
-      role: "assistant",
-      content: "I will check the RMA status.",
-    },
-    {
-      role: "assistant",
-      content: "I will check the RMA status.",
-    },
-  ],
-};
+let samples = [];
 
 sampleButton.addEventListener("click", () => {
-  input.value = JSON.stringify(samplePayload, null, 2);
+  const sample = samples.find((item) => item.id === sampleSelect.value) || samples[0];
+  if (sample) {
+    input.value = sample.input;
+  }
   clearError();
+});
+
+importInput.addEventListener("change", async () => {
+  const file = importInput.files?.[0];
+  if (!file) return;
+  input.value = await file.text();
+  clearError();
+  importInput.value = "";
 });
 
 analyzeButton.addEventListener("click", async () => {
@@ -53,6 +44,7 @@ analyzeButton.addEventListener("click", async () => {
     renderAnalysis(result);
     optimizedOutput.textContent = "";
     changes.innerHTML = "";
+    diffView.innerHTML = "";
   });
 });
 
@@ -76,8 +68,10 @@ nimButton.addEventListener("click", async () => {
       {
         type: "nim_summary",
         model: result.model,
+        preservation: result.preservation,
       },
     ]);
+    renderPreservation(result.preservation);
   });
 });
 
@@ -91,9 +85,21 @@ copyButton.addEventListener("click", async () => {
   }, 900);
 });
 
+exportTextButton.addEventListener("click", () => {
+  if (!lastCompile?.optimized_text) return;
+  download("promptcompiler-optimized.txt", lastCompile.optimized_text, "text/plain");
+});
+
+exportJsonButton.addEventListener("click", () => {
+  if (!lastCompile) return;
+  download("promptcompiler-report.json", JSON.stringify(lastCompile, null, 2), "application/json");
+});
+
 async function boot() {
-  input.value = JSON.stringify(samplePayload, null, 2);
-  await refreshHealth();
+  const health = await refreshHealth();
+  await loadModels(health);
+  await loadSamples();
+  if (samples[0]) input.value = samples[0].input;
   const result = await postJson("/api/analyze", requestPayload("input"));
   renderAnalysis(result);
 }
@@ -104,10 +110,38 @@ async function refreshHealth() {
     const payload = await response.json();
     nimStatus.textContent = payload.nim_configured ? "NIM ready" : "NIM key missing";
     nimStatus.className = `status-chip ${payload.nim_configured ? "ready" : "missing"}`;
+    return payload;
   } catch (error) {
     nimStatus.textContent = "Server offline";
     nimStatus.className = "status-chip missing";
+    return { default_model: "openai/gpt-oss-20b", nim_configured: false };
   }
+}
+
+async function loadModels(health) {
+  try {
+    const response = await fetch("/api/models");
+    const payload = await response.json();
+    const models = payload.models || [];
+    modelInput.innerHTML = models
+      .map(
+        (model) =>
+          `<option value="${escapeHtml(model.id)}">${escapeHtml(model.label)} (${escapeHtml(model.id)})</option>`,
+      )
+      .join("");
+    modelInput.value = payload.default_model || health.default_model || "openai/gpt-oss-20b";
+  } catch (error) {
+    modelInput.innerHTML = `<option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>`;
+  }
+}
+
+async function loadSamples() {
+  const response = await fetch("/api/samples");
+  const payload = await response.json();
+  samples = payload.samples || [];
+  sampleSelect.innerHTML = samples
+    .map((sample) => `<option value="${escapeHtml(sample.id)}">${escapeHtml(sample.name)}</option>`)
+    .join("");
 }
 
 function requestPayload(field) {
@@ -124,7 +158,13 @@ async function postJson(url, payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (error) {
+    data = { error: text || `Request failed with ${response.status}` };
+  }
   if (!response.ok) {
     const message = data.error || `Request failed with ${response.status}`;
     throw new Error(data.code ? `${data.code}: ${message}` : message);
@@ -167,6 +207,7 @@ function renderCompile(result) {
   ]);
   optimizedOutput.textContent = result.optimized_text;
   renderChanges(result.changes);
+  renderDiff(result.diff || []);
 }
 
 function renderMetrics(items) {
@@ -235,12 +276,47 @@ function renderChanges(items) {
             return `<div class="change">Compacted ${escapeHtml(item.segment_id)} and removed ${escapeHtml(String(item.lines_removed))} repeated or omitted lines.</div>`;
           }
           if (item.type === "nim_summary") {
-            return `<div class="change">NIM summary generated with ${escapeHtml(item.model)}.</div>`;
+            const missing = item.preservation?.missing_entities || [];
+            const warning = missing.length
+              ? ` Missing protected values: ${missing.map(escapeHtml).join(", ")}.`
+              : "";
+            return `<div class="change ${missing.length ? "warning" : ""}">NIM summary generated with ${escapeHtml(item.model)}.${warning}</div>`;
           }
           return `<div class="change">${escapeHtml(item.type)}</div>`;
         })
         .join("")
     : `<div class="row-pill"><span>No changes</span><strong>0</strong></div>`;
+}
+
+function renderDiff(items) {
+  diffView.innerHTML = items.length
+    ? items
+        .map(
+          (item) => `
+            <div class="diff-item ${escapeHtml(item.status)}">
+              <div class="diff-meta">
+                <div>${escapeHtml(item.segment_id)}</div>
+                <div>${escapeHtml(item.status)}</div>
+                <div>${escapeHtml(item.type)} / ${escapeHtml(item.role)}</div>
+              </div>
+              <div>
+                <h3>Original</h3>
+                <div class="diff-text">${escapeHtml(item.original_text || "")}</div>
+              </div>
+              <div>
+                <h3>Optimized</h3>
+                <div class="diff-text">${escapeHtml(item.optimized_text || item.reason || "")}</div>
+              </div>
+            </div>
+          `,
+        )
+        .join("")
+    : `<div class="row-pill"><span>No diff yet</span><strong>0</strong></div>`;
+}
+
+function renderPreservation(preservation) {
+  if (!preservation || preservation.ok) return;
+  showError(`NIM summary is missing protected values: ${preservation.missing_entities.join(", ")}`);
 }
 
 function showError(message) {
@@ -254,12 +330,24 @@ function clearError() {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function download(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 boot();

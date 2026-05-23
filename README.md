@@ -19,6 +19,26 @@ python3 -m promptcompiler.server
 
 The default model is `openai/gpt-oss-20b`. You can change the model in the workbench.
 
+If you paste a key into a chat or public log, revoke it and create a new one.
+
+## CLI
+
+```bash
+python3 -m promptcompiler.cli models
+python3 -m promptcompiler.cli analyze prompt.json
+python3 -m promptcompiler.cli compile prompt.json --out optimized.txt
+```
+
+## Current Features
+
+- Local prompt analysis with token estimates, role/type breakdown, duplicate groups, and protected entities.
+- Deterministic compile with pinned segment preservation, duplicate removal, repeated-line compaction, and segment-level diff.
+- Large tool/log truncation that preserves lines containing protected entities.
+- Optional NVIDIA NIM summarization with TLS certificate handling and protected-entity preservation warnings.
+- Model registry and built-in samples.
+- Import local prompt files from the browser.
+- Export optimized text or the full JSON compile report.
+
 ## Test
 
 ```bash

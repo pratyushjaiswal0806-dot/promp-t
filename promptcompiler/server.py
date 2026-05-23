@@ -9,7 +9,9 @@ from typing import Any
 
 from .analyzer import analyze_prompt
 from .compiler import compile_prompt
-from .nim import DEFAULT_NIM_MODEL, NimClient, NimConfigError, NimRequestError, nim_is_configured
+from .models import DEFAULT_NIM_MODEL, list_models
+from .nim import NimClient, NimConfigError, NimRequestError, nim_is_configured
+from .samples import list_samples
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +32,12 @@ def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, str]:
                 },
             )
 
+        if method == "GET" and path == "/api/models":
+            return _json_response(200, {"default_model": DEFAULT_NIM_MODEL, "models": list_models()})
+
+        if method == "GET" and path == "/api/samples":
+            return _json_response(200, {"samples": list_samples()})
+
         if method != "POST":
             return _json_response(405, {"error": "Method not allowed"})
 
@@ -41,6 +49,17 @@ def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, str]:
 
         if path == "/api/compile":
             return _json_response(200, compile_prompt(str(payload.get("input", "")), model=model))
+
+        if path == "/api/export":
+            result = compile_prompt(str(payload.get("input", "")), model=model)
+            return _json_response(
+                200,
+                {
+                    "model": model,
+                    "optimized_text": result["optimized_text"],
+                    "compile": result,
+                },
+            )
 
         if path == "/api/nim/summarize":
             text = str(payload.get("text", ""))

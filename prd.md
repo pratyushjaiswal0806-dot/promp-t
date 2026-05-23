@@ -158,3 +158,27 @@ The MVP is successful when:
 - Better token model registry.
 - Import/export JSON.
 - CLI wrapper.
+
+## 9. Current Implementation Status
+
+Implemented:
+
+- Local analyzer.
+- Deterministic compiler.
+- Segment-level diff.
+- Built-in model registry.
+- Built-in samples.
+- Browser import/export.
+- CLI analyze/compile/models commands.
+- Optional NVIDIA NIM summarization.
+- NIM TLS certificate handling for local Python installs.
+- Protected-entity preservation warnings for NIM summaries.
+
+Still future work:
+
+- Exact provider tokenizer integration.
+- Hosted multi-user deployment.
+- Production proxy mode.
+- Framework integrations.
+- Semantic cache.
+- LLM-as-judge evaluation dashboard.

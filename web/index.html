@@ -16,7 +16,7 @@
         <div class="topbar-controls">
           <label class="field compact">
             <span>Model</span>
-            <input id="modelInput" value="openai/gpt-oss-20b" autocomplete="off" />
+            <select id="modelInput"></select>
           </label>
           <span id="nimStatus" class="status-chip">Checking NIM</span>
         </div>
@@ -27,7 +27,12 @@
           <div class="panel-heading">
             <h2>Input</h2>
             <div class="button-row">
-              <button id="sampleButton" class="secondary" type="button">Sample</button>
+              <select id="sampleSelect" class="control-select" aria-label="Sample prompt"></select>
+              <button id="sampleButton" class="secondary" type="button">Load</button>
+              <label class="file-button">
+                Import
+                <input id="importInput" type="file" accept=".txt,.json,.md" />
+              </label>
               <button id="analyzeButton" type="button">Analyze</button>
               <button id="compileButton" class="primary" type="button">Compile</button>
             </div>
@@ -78,9 +83,20 @@
         <section class="panel output-panel">
           <div class="panel-heading">
             <h2>Optimized</h2>
-            <button id="copyButton" class="secondary" type="button">Copy</button>
+            <div class="button-row">
+              <button id="exportJsonButton" class="secondary" type="button">Export JSON</button>
+              <button id="exportTextButton" class="secondary" type="button">Export Text</button>
+              <button id="copyButton" class="secondary" type="button">Copy</button>
+            </div>
           </div>
           <pre id="optimizedOutput"></pre>
+        </section>
+
+        <section class="panel diff-panel">
+          <div class="panel-heading">
+            <h2>Diff</h2>
+          </div>
+          <div id="diffView" class="diff-view"></div>
         </section>
 
         <section class="panel changes-panel">

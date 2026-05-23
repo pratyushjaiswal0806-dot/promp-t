@@ -31,6 +31,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -149,6 +150,7 @@ h3 {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -163,6 +165,11 @@ input {
   padding: 0 10px;
 }
 
+select {
+  height: 36px;
+  padding: 0 32px 0 10px;
+}
+
 textarea {
   min-height: 360px;
   resize: vertical;
@@ -173,6 +180,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(19, 124, 114, 0.13);
@@ -222,6 +230,28 @@ textarea:focus {
   border-color: rgba(168, 101, 0, 0.25);
   color: var(--amber);
   background: #fff7e8;
+}
+
+.control-select {
+  width: min(220px, 100%);
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 14px;
+  color: var(--teal-dark);
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.file-button input {
+  display: none;
 }
 
 .metric-grid {
@@ -290,6 +320,11 @@ textarea:focus {
 
 .change {
   border-left: 3px solid var(--teal);
+}
+
+.change.warning {
+  border-left-color: var(--amber);
+  background: #fff8ec;
 }
 
 .error-box {
@@ -362,6 +397,54 @@ pre {
   white-space: pre-wrap;
 }
 
+.diff-view {
+  display: grid;
+  gap: 10px;
+}
+
+.diff-item {
+  display: grid;
+  grid-template-columns: 110px 1fr 1fr;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfa;
+}
+
+.diff-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.diff-text {
+  min-height: 44px;
+  max-height: 150px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.diff-item.removed {
+  border-left: 3px solid var(--red);
+}
+
+.diff-item.changed {
+  border-left: 3px solid var(--amber);
+}
+
+.diff-item.kept {
+  border-left: 3px solid var(--green);
+}
+
 @media (max-width: 980px) {
   .app-shell {
     padding: 14px;
@@ -369,7 +452,8 @@ pre {
 
   .topbar,
   .workspace,
-  .split {
+  .split,
+  .diff-item {
     grid-template-columns: 1fr;
   }
 

@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .diff import kept_diff, removed_diff
+from .entities import extract_entities
 from .parser import Segment, parse_prompt
 from .tokenizer import estimate_text_tokens
 
@@ -18,6 +20,7 @@ def compile_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[st
 
     original_segments = parse_prompt(raw_input)
     changes: list[dict[str, Any]] = []
+    diff: list[dict[str, object]] = []
     retained: list[tuple[Segment, str]] = []
     seen: dict[str, str] = {}
 
@@ -32,6 +35,7 @@ def compile_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[st
                     "tokens": segment.tokens,
                 }
             )
+            diff.append(removed_diff(segment, "Exact duplicate of retained unpinned segment."))
             continue
 
         seen[normalized] = segment.id
@@ -41,6 +45,7 @@ def compile_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[st
             if compaction_change:
                 changes.append(compaction_change)
         retained.append((segment, compiled_text))
+        diff.append(kept_diff(segment, compiled_text))
 
     optimized_text = "\n\n".join(text for _, text in retained)
     original_tokens = sum(segment.tokens for segment in original_segments)
@@ -55,6 +60,7 @@ def compile_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[st
         "savings_ratio": round(tokens_saved / original_tokens, 4) if original_tokens else 0,
         "optimized_text": optimized_text,
         "changes": changes,
+        "diff": diff,
         "retained_segment_ids": [segment.id for segment, _ in retained],
     }
 
@@ -109,10 +115,14 @@ def _truncate_large_tool_output(text: str, segment: Segment) -> tuple[str, int]:
         return text, 0
 
     head = lines[:45]
+    middle = lines[45:-10]
+    protected_middle = [
+        line for line in middle if extract_entities(line) and line not in head and line not in lines[-10:]
+    ]
     tail = lines[-10:]
-    omitted = len(lines) - len(head) - len(tail)
+    omitted = len(lines) - len(head) - len(protected_middle) - len(tail)
     marker = f"[omitted {omitted} middle lines]"
-    return "\n".join([*head, marker, *tail]), omitted
+    return "\n".join([*head, *protected_middle, marker, *tail]), max(0, omitted)
 
 
 def _normalize(text: str) -> str:
