@@ -6,10 +6,11 @@ from collections import defaultdict
 import re
 from typing import Any
 
+from .models import DEFAULT_NIM_MODEL
 from .parser import Segment, parse_prompt
 
 
-def analyze_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[str, Any]:
+def analyze_prompt(raw_input: str, model: str = DEFAULT_NIM_MODEL) -> dict[str, Any]:
     """Analyze prompt structure and return JSON-serializable metrics."""
 
     segments = parse_prompt(raw_input)

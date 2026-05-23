@@ -64,6 +64,48 @@ class NimClient:
             ],
         }
 
+    def list_available_models(self) -> list[dict[str, Any]]:
+        request = urllib.request.Request(
+            f"{self.base_url.rstrip('/')}/models",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+            },
+            method="GET",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=30, context=_ssl_context()) as response:
+                body = response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise NimRequestError(f"NIM model listing failed with HTTP {exc.code}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise NimRequestError(f"NIM model listing failed: {exc.reason}") from exc
+
+        parsed = json.loads(body)
+        raw_models = parsed.get("data", [])
+        if not isinstance(raw_models, list):
+            raise NimRequestError("NIM model listing response did not include a data array")
+
+        models: list[dict[str, Any]] = []
+        for item in raw_models:
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            model_id = str(item["id"])
+            models.append(
+                {
+                    "id": model_id,
+                    "provider": "nvidia-nim",
+                    "label": _label_from_model_id(model_id),
+                    "context_window": int(item.get("context_window") or 0),
+                    "tokenizer": "fallback-estimate",
+                    "notes": "Loaded from NVIDIA NIM /v1/models for this API key.",
+                }
+            )
+
+        return sorted(models, key=lambda model: (model["id"].startswith("openai/gpt-oss"), model["id"]))
+
     def summarize(self, text: str, model: str = DEFAULT_NIM_MODEL) -> dict[str, Any]:
         payload = self.build_summarize_payload(text, model)
         data = json.dumps(payload).encode("utf-8")
@@ -130,3 +172,7 @@ def _check_preservation(original: str, summary: str) -> dict[str, Any]:
         "checked_entities": original_entities,
         "missing_entities": missing,
     }
+
+
+def _label_from_model_id(model_id: str) -> str:
+    return model_id.split("/", 1)[-1].replace("-", " ").replace("_", " ").title()

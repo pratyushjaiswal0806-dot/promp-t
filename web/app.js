@@ -11,6 +11,7 @@ const exportJsonButton = document.querySelector("#exportJsonButton");
 const exportTextButton = document.querySelector("#exportTextButton");
 const errorBox = document.querySelector("#errorBox");
 const nimStatus = document.querySelector("#nimStatus");
+const modelSource = document.querySelector("#modelSource");
 const metrics = document.querySelector("#metrics");
 const breakdown = document.querySelector("#breakdown");
 const entities = document.querySelector("#entities");
@@ -21,6 +22,7 @@ const diffView = document.querySelector("#diffView");
 
 let lastCompile = null;
 let samples = [];
+const fallbackModel = "nvidia/llama-3.1-nemotron-nano-8b-v1";
 
 sampleButton.addEventListener("click", () => {
   const sample = samples.find((item) => item.id === sampleSelect.value) || samples[0];
@@ -114,7 +116,7 @@ async function refreshHealth() {
   } catch (error) {
     nimStatus.textContent = "Server offline";
     nimStatus.className = "status-chip missing";
-    return { default_model: "openai/gpt-oss-20b", nim_configured: false };
+    return { default_model: fallbackModel, nim_configured: false };
   }
 }
 
@@ -129,9 +131,13 @@ async function loadModels(health) {
           `<option value="${escapeHtml(model.id)}">${escapeHtml(model.label)} (${escapeHtml(model.id)})</option>`,
       )
       .join("");
-    modelInput.value = payload.default_model || health.default_model || "openai/gpt-oss-20b";
+    modelInput.value = payload.default_model || health.default_model || fallbackModel;
+    modelSource.textContent = payload.source === "nvidia-live" ? "NVIDIA models" : "Local models";
+    modelSource.className = `status-chip ${payload.source === "nvidia-live" ? "ready" : "missing"}`;
   } catch (error) {
-    modelInput.innerHTML = `<option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>`;
+    modelInput.innerHTML = `<option value="${fallbackModel}">${fallbackModel}</option>`;
+    modelSource.textContent = "Model fallback";
+    modelSource.className = "status-chip missing";
   }
 }
 
@@ -147,7 +153,7 @@ async function loadSamples() {
 function requestPayload(field) {
   return {
     [field]: input.value,
-    model: modelInput.value.trim() || "openai/gpt-oss-20b",
+    model: modelInput.value.trim() || fallbackModel,
   };
 }
 

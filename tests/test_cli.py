@@ -6,6 +6,7 @@ from io import StringIO
 from pathlib import Path
 
 from promptcompiler.cli import run_cli
+from promptcompiler.models import DEFAULT_NIM_MODEL
 
 
 class CliTests(unittest.TestCase):
@@ -32,3 +33,14 @@ class CliTests(unittest.TestCase):
 
             self.assertEqual(code, 0)
             self.assertEqual(target.read_text(encoding="utf-8"), "@pin Keep CASE-123.\n\nx")
+
+    def test_cli_models_uses_non_oss_default(self):
+        out = StringIO()
+
+        with redirect_stdout(out):
+            code = run_cli(["models"])
+
+        payload = json.loads(out.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["default_model"], DEFAULT_NIM_MODEL)
+        self.assertNotEqual(payload["default_model"], "openai/gpt-oss-20b")

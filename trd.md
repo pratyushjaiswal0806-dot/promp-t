@@ -30,7 +30,9 @@ flowchart TD
 - Frontend: Static HTML, CSS, and JavaScript.
 - API shape: JSON over local HTTP.
 - NIM endpoint: `https://integrate.api.nvidia.com/v1/chat/completions`.
+- NIM model listing: `https://integrate.api.nvidia.com/v1/models`.
 - Secret: `NVIDIA_API_KEY` environment variable.
+- Optional model default override: `PROMPTCOMPILER_DEFAULT_MODEL`.
 
 No database is required for the MVP.
 
@@ -176,7 +178,7 @@ The NIM client:
 - Reads `NVIDIA_API_KEY` from the environment.
 - Uses OpenAI-compatible request format.
 - Sends requests to `https://integrate.api.nvidia.com/v1/chat/completions`.
-- Defaults to `openai/gpt-oss-20b`, configurable by request.
+- Defaults to the configured non-OSS model, configurable by request.
 - Uses low temperature for compression tasks.
 - Returns a structured error if the key is missing.
 - Builds an SSL context from `certifi` when available so Python framework installs on macOS can verify NVIDIA TLS certificates.
@@ -196,7 +198,7 @@ Returns app status and whether NIM is configured.
 
 ### `GET /api/models`
 
-Returns the built-in model registry and default model.
+Returns a live NVIDIA model list when `NVIDIA_API_KEY` is configured and `/v1/models` succeeds. Falls back to the built-in registry when no key exists or the live request fails. The default must not be `openai/gpt-oss-20b` unless the user explicitly sets `PROMPTCOMPILER_DEFAULT_MODEL` to that value.
 
 ### `GET /api/samples`
 
@@ -209,7 +211,7 @@ Request:
 ```json
 {
   "input": "raw text or JSON",
-  "model": "openai/gpt-oss-20b"
+  "model": "nvidia/llama-3.1-nemotron-nano-8b-v1"
 }
 ```
 
@@ -222,7 +224,7 @@ Request:
 ```json
 {
   "input": "raw text or JSON",
-  "model": "openai/gpt-oss-20b"
+  "model": "nvidia/llama-3.1-nemotron-nano-8b-v1"
 }
 ```
 
@@ -239,7 +241,7 @@ Request:
 ```json
 {
   "text": "unpinned text to summarize",
-  "model": "openai/gpt-oss-20b"
+  "model": "nvidia/llama-3.1-nemotron-nano-8b-v1"
 }
 ```
 
@@ -248,7 +250,7 @@ Response:
 ```json
 {
   "summary": "compressed text",
-  "model": "openai/gpt-oss-20b",
+  "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
   "preservation": {
     "ok": true,
     "checked_entities": [],

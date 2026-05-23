@@ -11,11 +11,12 @@ from typing import Any
 
 from .diff import kept_diff, removed_diff
 from .entities import extract_entities
+from .models import DEFAULT_NIM_MODEL
 from .parser import Segment, parse_prompt
 from .tokenizer import estimate_text_tokens
 
 
-def compile_prompt(raw_input: str, model: str = "openai/gpt-oss-20b") -> dict[str, Any]:
+def compile_prompt(raw_input: str, model: str = DEFAULT_NIM_MODEL) -> dict[str, Any]:
     """Compile a prompt with deterministic, safety-first transforms."""
 
     original_segments = parse_prompt(raw_input)

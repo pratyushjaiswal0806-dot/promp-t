@@ -17,7 +17,11 @@ export NVIDIA_API_KEY="your_key"
 python3 -m promptcompiler.server
 ```
 
-The default model is `openai/gpt-oss-20b`. You can change the model in the workbench.
+The app uses `NVIDIA_API_KEY` to load available models from NVIDIA's OpenAI-compatible `/v1/models` endpoint. The default is a non-OSS NVIDIA model when available, and you can override it with `PROMPTCOMPILER_DEFAULT_MODEL`.
+
+```bash
+export PROMPTCOMPILER_DEFAULT_MODEL="nvidia/nemotron-3-nano-30b-a3b"
+```
 
 If you paste a key into a chat or public log, revoke it and create a new one.
 
@@ -35,7 +39,8 @@ python3 -m promptcompiler.cli compile prompt.json --out optimized.txt
 - Deterministic compile with pinned segment preservation, duplicate removal, repeated-line compaction, and segment-level diff.
 - Large tool/log truncation that preserves lines containing protected entities.
 - Optional NVIDIA NIM summarization with TLS certificate handling and protected-entity preservation warnings.
-- Model registry and built-in samples.
+- Live NVIDIA model picker with local registry fallback.
+- Built-in samples.
 - Import local prompt files from the browser.
 - Export optimized text or the full JSON compile report.
 

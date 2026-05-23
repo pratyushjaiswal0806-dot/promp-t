@@ -171,6 +171,7 @@ Implemented:
 - Browser import/export.
 - CLI analyze/compile/models commands.
 - Optional NVIDIA NIM summarization.
+- Live NVIDIA model picker through the account API key.
 - NIM TLS certificate handling for local Python installs.
 - Protected-entity preservation warnings for NIM summaries.
 

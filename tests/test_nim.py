@@ -50,6 +50,28 @@ class NimClientTests(unittest.TestCase):
         self.assertIn("CASE-123", result["preservation"]["missing_entities"])
         self.assertIn("2026-05-23", result["preservation"]["missing_entities"])
 
+    def test_list_available_models_uses_nvidia_models_endpoint(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return b'{"data":[{"id":"nvidia/nemotron-3-nano-30b-a3b"},{"id":"openai/gpt-oss-20b"}]}'
+
+        client = NimClient(api_key="test-key")
+
+        with patch("urllib.request.urlopen", return_value=FakeResponse()) as urlopen:
+            models = client.list_available_models()
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "https://integrate.api.nvidia.com/v1/models")
+        self.assertIn("context", urlopen.call_args.kwargs)
+        self.assertEqual(models[0]["id"], "nvidia/nemotron-3-nano-30b-a3b")
+        self.assertEqual(models[0]["provider"], "nvidia-nim")
+
 
 if __name__ == "__main__":
     unittest.main()

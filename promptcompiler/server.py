@@ -33,7 +33,7 @@ def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, str]:
             )
 
         if method == "GET" and path == "/api/models":
-            return _json_response(200, {"default_model": DEFAULT_NIM_MODEL, "models": list_models()})
+            return _json_response(200, _models_response())
 
         if method == "GET" and path == "/api/samples":
             return _json_response(200, {"samples": list_samples()})
@@ -146,6 +146,45 @@ def _parse_json_body(body: bytes) -> dict[str, Any]:
 
 def _json_response(status: int, payload: dict[str, Any]) -> tuple[int, str]:
     return status, json.dumps(payload, ensure_ascii=True, sort_keys=True)
+
+
+def _models_response() -> dict[str, Any]:
+    fallback_models = list_models()
+    if not nim_is_configured():
+        return {
+            "default_model": _choose_default_model(fallback_models),
+            "models": fallback_models,
+            "source": "local-registry",
+        }
+
+    try:
+        live_models = NimClient.from_env().list_available_models()
+    except (NimConfigError, NimRequestError):
+        return {
+            "default_model": _choose_default_model(fallback_models),
+            "models": fallback_models,
+            "source": "local-registry",
+        }
+
+    models = live_models or fallback_models
+    return {
+        "default_model": _choose_default_model(models),
+        "models": models,
+        "source": "nvidia-live" if live_models else "local-registry",
+    }
+
+
+def _choose_default_model(models: list[dict[str, Any]]) -> str:
+    configured = DEFAULT_NIM_MODEL
+    if any(model.get("id") == configured for model in models):
+        return configured
+    for model in models:
+        model_id = str(model.get("id", ""))
+        if not model_id.startswith("openai/gpt-oss"):
+            return model_id
+    if models:
+        return str(models[0].get("id"))
+    return configured
 
 
 def _content_type(path: Path) -> str:

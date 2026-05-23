@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import os
 
 
-DEFAULT_NIM_MODEL = "openai/gpt-oss-20b"
+DEFAULT_NIM_MODEL = os.environ.get(
+    "PROMPTCOMPILER_DEFAULT_MODEL",
+    "nvidia/llama-3.1-nemotron-nano-8b-v1",
+)
 
 
 @dataclass(frozen=True)
@@ -23,12 +27,36 @@ class ModelSpec:
 
 _MODELS = [
     ModelSpec(
+        id="nvidia/llama-3.1-nemotron-nano-8b-v1",
+        provider="nvidia-nim",
+        label="NVIDIA Llama 3.1 Nemotron Nano 8B",
+        context_window=128000,
+        tokenizer="fallback-estimate",
+        notes="Default non-OSS NVIDIA model for prompt compression experiments.",
+    ),
+    ModelSpec(
+        id="nvidia/nemotron-3-nano-30b-a3b",
+        provider="nvidia-nim",
+        label="NVIDIA Nemotron 3 Nano 30B",
+        context_window=128000,
+        tokenizer="fallback-estimate",
+        notes="NVIDIA model option when exposed by the account-level API key.",
+    ),
+    ModelSpec(
+        id="deepseek-ai/deepseek-v3.2",
+        provider="nvidia-nim",
+        label="DeepSeek V3.2",
+        context_window=128000,
+        tokenizer="fallback-estimate",
+        notes="Large reasoning model option when exposed by the account-level API key.",
+    ),
+    ModelSpec(
         id="openai/gpt-oss-20b",
         provider="nvidia-nim",
         label="OpenAI GPT OSS 20B",
         context_window=128000,
         tokenizer="gpt-4o-compatible-estimate",
-        notes="Default NIM development model for low-cost summarization and reasoning.",
+        notes="Fallback OpenAI OSS NIM model. Not used as the default.",
     ),
     ModelSpec(
         id="openai/gpt-oss-120b",
