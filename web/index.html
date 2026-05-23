@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptCompiler</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>PromptCompiler</h1>
+          <p class="subtle">NIM-first local context workbench</p>
+        </div>
+        <div class="topbar-controls">
+          <label class="field compact">
+            <span>Model</span>
+            <input id="modelInput" value="openai/gpt-oss-20b" autocomplete="off" />
+          </label>
+          <span id="nimStatus" class="status-chip">Checking NIM</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel input-panel">
+          <div class="panel-heading">
+            <h2>Input</h2>
+            <div class="button-row">
+              <button id="sampleButton" class="secondary" type="button">Sample</button>
+              <button id="analyzeButton" type="button">Analyze</button>
+              <button id="compileButton" class="primary" type="button">Compile</button>
+            </div>
+          </div>
+          <textarea id="promptInput" spellcheck="false"></textarea>
+          <div id="errorBox" class="error-box" hidden></div>
+        </section>
+
+        <section class="panel results-panel">
+          <div class="panel-heading">
+            <h2>Metrics</h2>
+            <button id="nimButton" class="secondary" type="button">NIM Summarize</button>
+          </div>
+          <div id="metrics" class="metric-grid"></div>
+          <div class="split">
+            <div>
+              <h3>Breakdown</h3>
+              <div id="breakdown" class="breakdown"></div>
+            </div>
+            <div>
+              <h3>Protected</h3>
+              <div id="entities" class="entity-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <h2>Segments</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Type</th>
+                  <th>Role</th>
+                  <th>Tokens</th>
+                  <th>Pin</th>
+                  <th>Preview</th>
+                </tr>
+              </thead>
+              <tbody id="segmentsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel output-panel">
+          <div class="panel-heading">
+            <h2>Optimized</h2>
+            <button id="copyButton" class="secondary" type="button">Copy</button>
+          </div>
+          <pre id="optimizedOutput"></pre>
+        </section>
+
+        <section class="panel changes-panel">
+          <div class="panel-heading">
+            <h2>Changes</h2>
+          </div>
+          <div id="changes"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
