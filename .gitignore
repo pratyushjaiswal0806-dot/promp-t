@@ -3,3 +3,12 @@ __pycache__/
 .DS_Store
 .env
 .env.local
+.promptcompiler/
+node_modules/
+dist/
+coverage/
+artifacts/
+.worktrees/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

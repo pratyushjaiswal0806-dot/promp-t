@@ -5,10 +5,14 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import os
 
+from .env import load_local_env
+
+
+load_local_env()
 
 DEFAULT_NIM_MODEL = os.environ.get(
     "PROMPTCOMPILER_DEFAULT_MODEL",
-    "nvidia/llama-3.1-nemotron-nano-8b-v1",
+    "openai/gpt-oss-120b",
 )
 
 
@@ -26,6 +30,14 @@ class ModelSpec:
 
 
 _MODELS = [
+    ModelSpec(
+        id="openai/gpt-oss-120b",
+        provider="nvidia-nim",
+        label="OpenAI GPT OSS 120B",
+        context_window=128000,
+        tokenizer="gpt-4o-compatible-estimate",
+        notes="Default high-capacity NIM model for extensive prompt generation and compilation.",
+    ),
     ModelSpec(
         id="nvidia/llama-3.1-nemotron-nano-8b-v1",
         provider="nvidia-nim",
@@ -57,14 +69,6 @@ _MODELS = [
         context_window=128000,
         tokenizer="gpt-4o-compatible-estimate",
         notes="Fallback OpenAI OSS NIM model. Not used as the default.",
-    ),
-    ModelSpec(
-        id="openai/gpt-oss-120b",
-        provider="nvidia-nim",
-        label="OpenAI GPT OSS 120B",
-        context_window=128000,
-        tokenizer="gpt-4o-compatible-estimate",
-        notes="Higher-capacity NIM model when available in the account.",
     ),
     ModelSpec(
         id="qwen/qwen2.5-coder-32b-instruct",
