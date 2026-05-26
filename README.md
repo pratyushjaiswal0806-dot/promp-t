@@ -4,6 +4,20 @@ PromptCompiler is a local-first prompt analysis and optimization workbench. It h
 
 It runs locally with deterministic Python logic by default. NVIDIA NIM integration is optional and only used when you provide an API key.
 
+## Table of Contents
+
+- [What It Does](#what-it-does)
+- [Project Layout](#project-layout)
+- [Requirements](#requirements)
+- [Quickstart](#quickstart)
+- [Configuration](#configuration)
+- [Run Locally](#run-locally)
+- [CLI](#cli)
+- [API Examples](#api-examples)
+- [Python SDK](#python-sdk)
+- [Tests and Build](#tests-and-build)
+- [Notes](#notes)
+
 ## What It Does
 
 - Analyzes prompt structure, token estimates, roles, duplicate sections, and protected entities.
@@ -36,10 +50,24 @@ PROJECT_BLUEPRINT.md Combined architecture and roadmap reference
 
 The Python code uses the standard library for the local server and core tests. The frontend uses Vite and React.
 
-## Setup
+## Quickstart
 
 ```bash
 npm install
+cp .env.example .env
+npm run build
+python3 -m promptcompiler.server
+```
+
+Open:
+
+```text
+http://127.0.0.1:8765
+```
+
+## Configuration
+
+```bash
 cp .env.example .env
 ```
 
@@ -152,7 +180,7 @@ compiled = client.compile(
 
 You can also wrap OpenAI-like clients with `promptcompiler.wrap(...)` for local analysis or mock proxy flows.
 
-## Test And Build
+## Tests and Build
 
 Run the Python and browser regression suite:
 
