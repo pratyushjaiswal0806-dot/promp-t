@@ -19,7 +19,7 @@ class SemanticTests(unittest.TestCase):
 
         self.assertGreater(len(chunks), 1)
         self.assertTrue(all(chunk["source"] == "doc-a" for chunk in chunks))
-        self.assertEqual(chunks[0]["id"], "seg_1_chunk_1")
+        self.assertTrue(chunks[0]["id"].endswith("_1_chunk_1"))
         self.assertEqual(chunks[1]["overlap_tokens"], 3)
         self.assertLessEqual(chunks[0]["tokens"], 18)
 

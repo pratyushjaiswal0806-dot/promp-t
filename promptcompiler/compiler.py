@@ -47,8 +47,37 @@ def compile_prompt(
     dry_run: bool = False,
     semantic_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Compile a prompt with deterministic, safety-first transforms."""
+    """Compile a prompt with deterministic, safety-first transforms.
 
+    Parameters
+    ----------
+    raw_input : str
+        The prompt text to compile.
+    model : str
+        Model identifier for token estimation (default from DEFAULT_NIM_MODEL).
+    mode : str
+        Compression mode: "lossless" (default, no content removed),
+        "balanced" (moderate dedup/summarization), or "aggressive" (maximum).
+    target_token_budget : int | None
+        Target token count for the output. When set, the compiler attempts to
+        meet this budget. Raises CompilePolicyError if pinned content exceeds
+        25% of the budget. A warning is emitted if the budget cannot be met safely.
+    dry_run : bool
+        If True, compute the plan but return the original text unchanged.
+    semantic_policy : dict | None
+        Optional semantic dedup configuration. See build_semantic_report.
+
+    Returns
+    -------
+    dict
+        Compiled result with optimized_text, diff, plan, semantic metadata, warnings, etc.
+
+    Raises
+    ------
+    CompilePolicyError
+        If the mode is invalid, target_token_budget is invalid, or pinned
+        content exceeds the budget.
+    """
     normalized_mode = _validate_mode(mode)
     normalized_budget = _normalize_budget(target_token_budget)
     original_segments = parse_prompt(raw_input)

@@ -195,6 +195,14 @@ def build_semantic_report(
     policy = normalize_semantic_policy(semantic_policy)
     chunks = [chunk for segment in segments for chunk in chunk_segment(segment)]
     scored = score_chunks(chunks, query, semantic_policy=policy)
+
+    # Extract embedding vectors into separate dict to prevent leaking into output
+    embedding_vectors: dict[str, list[float]] = {}
+    for chunk in scored:
+        vec = chunk.pop("_embedding_vector", None)
+        if vec is not None:
+            embedding_vectors[str(chunk["id"])] = vec
+
     by_segment: dict[str, list[dict[str, Any]]] = {}
     for chunk in scored:
         by_segment.setdefault(str(chunk["segment_id"]), []).append(chunk)
@@ -206,11 +214,7 @@ def build_semantic_report(
     if mode in {"balanced", "aggressive"}:
         threshold = 0.78 if mode == "balanced" else 0.62
         retained_rag: list[dict[str, Any]] = []
-        rag_chunks = [
-            chunk
-            for chunk in scored
-            if chunk.get("segment_type") == "rag" and len(by_segment[str(chunk["segment_id"])]) == 1
-        ]
+        rag_chunks = [chunk for chunk in scored if chunk.get("segment_type") == "rag"]
         rag_chunks.sort(
             key=lambda item: (
                 -float(item["query_relevance_score"]),
@@ -224,7 +228,10 @@ def build_semantic_report(
                 retained_rag.append(chunk)
                 continue
 
-            redundant_with = _similar_retained_chunk(chunk, retained_rag, threshold, policy)
+            cross_segment_retained = [
+                c for c in retained_rag if c["segment_id"] != chunk["segment_id"]
+            ]
+            redundant_with = _similar_retained_chunk(chunk, cross_segment_retained, threshold, policy, embedding_vectors)
             if (
                 redundant_with is not None
                 and float(chunk["query_relevance_score"])
@@ -289,7 +296,7 @@ def _chunk_dict(
     return {
         "id": f"{segment.id}_chunk_{chunk_index}",
         "segment_id": segment.id,
-        "segment_order": int(segment.id.removeprefix("seg_") or 0),
+        "segment_order": int(segment.id.split("_")[-1] or 0),
         "chunk_index": chunk_index,
         "segment_type": segment.type,
         "role": segment.role,
@@ -393,15 +400,16 @@ def _similar_retained_chunk(
     retained: list[dict[str, Any]],
     threshold: float,
     policy: dict[str, Any],
+    embedding_vectors: dict[str, list[float]] | None = None,
 ) -> dict[str, Any] | None:
     if policy["scorer"] == "embedding":
-        chunk_vector = chunk.get("_embedding_vector")
+        chunk_vector = (embedding_vectors or {}).get(chunk.get("id", ""))
         if not isinstance(chunk_vector, list):
             return None
         best: dict[str, Any] | None = None
         best_similarity = 0.0
         for candidate in retained:
-            candidate_vector = candidate.get("_embedding_vector")
+            candidate_vector = (embedding_vectors or {}).get(candidate.get("id", ""))
             if not isinstance(candidate_vector, list):
                 continue
             similarity = cosine_similarity(chunk_vector, candidate_vector)

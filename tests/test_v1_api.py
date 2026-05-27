@@ -468,6 +468,34 @@ class V1ApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("Streaming proxy responses are not supported", payload["error"])
 
+    def test_v1_analyze_rejects_invalid_mode(self):
+        status, response = post_v1(
+            "/v1/analyze",
+            {
+                "model": "gpt-4o-mini",
+                "mode": "invalid_mode",
+                "messages": [{"role": "user", "content": "hello"}],
+            },
+        )
+
+        payload = json.loads(response)
+        self.assertEqual(status, 400)
+        self.assertIn("Unsupported compression mode", payload["error"])
+
+    def test_v1_compile_rejects_negative_target_token_budget(self):
+        status, response = post_v1(
+            "/v1/compile",
+            {
+                "model": "gpt-4o-mini",
+                "target_token_budget": -1,
+                "messages": [{"role": "user", "content": "hello"}],
+            },
+        )
+
+        payload = json.loads(response)
+        self.assertEqual(status, 400)
+        self.assertIn("non-negative integer", payload["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

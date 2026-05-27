@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 from typing import Any
 
@@ -133,8 +134,9 @@ def _type_from_text(text: str) -> str:
 
 
 def _make_segment(index: int, role: str, segment_type: str, text: str) -> Segment:
+    content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
     return Segment(
-        id=f"seg_{index}",
+        id=f"seg_{content_hash}_{index}",
         type=segment_type,
         role=role,
         text=text,

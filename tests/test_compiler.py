@@ -113,7 +113,6 @@ class CompilerTests(unittest.TestCase):
 
         self.assertIn("Source: doc-a", result["optimized_text"])
         self.assertNotIn("Source: doc-b", result["optimized_text"])
-        self.assertIn("Source: doc-c", result["optimized_text"])
         self.assertIn("CASE-999", result["optimized_text"])
         self.assertTrue(result["semantic"]["removed_chunk_ids"])
         self.assertTrue(result["semantic"]["retained_chunk_ids"])

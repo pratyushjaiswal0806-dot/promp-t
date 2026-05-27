@@ -48,6 +48,11 @@ class NormalizedV1Request:
 
 
 def analyze_v1(payload: dict[str, Any]) -> dict[str, Any]:
+    """Analyze a prompt via the v1 API.
+
+    Returns token breakdown, component analysis, budget utilization,
+    and a recommendation on whether to compile.
+    """
     started = time.perf_counter()
     request = normalize_v1_request(payload)
     analysis = analyze_prompt(request.raw_input, model=request.model)
@@ -99,6 +104,12 @@ def analyze_v1(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
+    """Compile a prompt via the v1 API.
+
+    Applies deterministic compression (dedup, summarization, semantic pruning)
+    based on the normalized request parameters. Caches results by cache key.
+    Records a trace for observability.
+    """
     started = time.perf_counter()
     request = normalize_v1_request(payload)
     cache_key = _compile_cache_key(payload, request)
@@ -190,6 +201,18 @@ def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def retrieve_v1(payload: dict[str, Any]) -> dict[str, Any]:
+    """Retrieve the most relevant RAG chunks for a query using semantic search.
+
+    Parameters
+    ----------
+    payload : dict
+        Must contain "query" (str) and "rag_chunks" (list of dicts with id/source/text).
+
+    Returns
+    -------
+    dict
+        Retrieved chunks ordered by relevance score.
+    """
     query = str(payload.get("query") or "")
     chunks = []
     for index, item in enumerate(payload.get("rag_chunks") or []):
@@ -212,6 +235,18 @@ def retrieve_v1(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def lint_v1(payload: dict[str, Any]) -> dict[str, Any]:
+    """Lint a prompt for token waste and return actionable findings.
+
+    Parameters
+    ----------
+    payload : dict
+        Must contain "input" (str) — the prompt text to lint.
+
+    Returns
+    -------
+    dict
+        Payload kind and a list of findings (redundant whitespace, repeated lines, etc.).
+    """
     raw_input, payload_kind, _ = _raw_input_from_payload(payload)
     return {
         "payload_kind": payload_kind,
@@ -220,6 +255,20 @@ def lint_v1(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def append_session_v1(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Append a conversation turn to a session with automatic compaction.
+
+    Parameters
+    ----------
+    session_id : str
+        Session identifier.
+    payload : dict
+        Turn data (role, content) plus optional policy fields (zero_retention, mode, etc.).
+
+    Returns
+    -------
+    dict
+        Result of appending the turn, including compaction metadata if triggered.
+    """
     provider = str(payload.get("provider") or _provider_from_model(str(payload.get("model", ""))))
     model = str(payload.get("model") or DEFAULT_NIM_MODEL)
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
@@ -242,14 +291,17 @@ def append_session_v1(session_id: str, payload: dict[str, Any]) -> dict[str, Any
 
 
 def metrics_v1(filters: dict[str, str]) -> dict[str, Any]:
+    """Return aggregate usage metrics (request count, tokens, etc.)."""
     return get_store().metrics(filters)
 
 
 def request_trace_v1(trace_id: str) -> dict[str, Any] | None:
+    """Return a request trace by ID, or None if not found."""
     return get_store().get_trace(trace_id)
 
 
 def session_context_v1(session_id: str, filters: dict[str, str]) -> dict[str, Any]:
+    """Return session context with sliding window and budget."""
     target = _target_budget(filters.get("target_token_budget"))
     window = int(filters.get("sliding_window_turns") or 4)
     return {
@@ -258,6 +310,9 @@ def session_context_v1(session_id: str, filters: dict[str, str]) -> dict[str, An
         "sliding_window_turns": window,
         "context": get_store().session_context(session_id, target, window),
     }
+
+
+_ALLOWED_MODES = {"lossless", "balanced", "aggressive"}
 
 
 def normalize_v1_request(payload: dict[str, Any]) -> NormalizedV1Request:
@@ -273,14 +328,22 @@ def normalize_v1_request(payload: dict[str, Any]) -> NormalizedV1Request:
     raw_input, payload_kind, messages = _raw_input_from_payload(payload, tool_policy=tool_policy)
     raw_input = _apply_prompt_policies(raw_input, context_policy, output_policy)
 
+    mode = str(payload.get("mode") or "lossless").strip().lower()
+    if mode not in _ALLOWED_MODES:
+        raise ValueError(
+            f"Unsupported compression mode '{mode}'. Choose lossless, balanced, or aggressive."
+        )
+
+    target_token_budget = _target_budget(payload.get("target_token_budget"))
+
     return NormalizedV1Request(
         trace_id=str(payload.get("trace_id") or f"tr_{uuid4().hex}"),
         provider=provider,
         model=model,
         session_id=str(payload["session_id"]) if payload.get("session_id") else None,
         raw_input=raw_input,
-        mode=str(payload.get("mode") or "lossless"),
-        target_token_budget=_target_budget(payload.get("target_token_budget")),
+        mode=mode,
+        target_token_budget=target_token_budget,
         dry_run=bool(payload.get("dry_run", False)),
         zero_retention=zero_retention,
         payload_kind=payload_kind,
@@ -448,7 +511,10 @@ def _content_to_text(content: Any) -> str:
 def _target_budget(value: Any) -> int | None:
     if value is None or value == "":
         return None
-    return int(value)
+    budget = int(value)
+    if budget < 0:
+        raise ValueError("target_token_budget must be a non-negative integer.")
+    return budget
 
 
 def _provider_from_model(model: str) -> str:

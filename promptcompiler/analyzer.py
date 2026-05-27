@@ -11,8 +11,21 @@ from .parser import Segment, parse_prompt
 
 
 def analyze_prompt(raw_input: str, model: str = DEFAULT_NIM_MODEL) -> dict[str, Any]:
-    """Analyze prompt structure and return JSON-serializable metrics."""
+    """Analyze prompt structure and return JSON-serializable metrics.
 
+    Parameters
+    ----------
+    raw_input : str
+        The prompt text to analyze.
+    model : str
+        Model identifier (default from DEFAULT_NIM_MODEL).
+
+    Returns
+    -------
+    dict
+        Token counts by type/role, duplicate groups, largest segments,
+        protected entities, and compression opportunity ratio.
+    """
     segments = parse_prompt(raw_input)
     total_tokens = sum(segment.tokens for segment in segments)
     duplicate_groups = _duplicate_groups(segments)

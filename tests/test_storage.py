@@ -33,6 +33,7 @@ class SQLiteStoreTests(unittest.TestCase):
 
             trace = store.get_trace("tr_test")
             metrics = store.metrics({})
+            store.close()
 
         self.assertEqual(trace["trace_id"], "tr_test")
         self.assertEqual(trace["original_token_count"], 100)
@@ -60,6 +61,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     )
                 )
             rows = store.session_turn_rows("sess_compact")
+            store.close()
 
         triggered = [item for item in responses if item["adaptive_management_triggered"]]
         self.assertTrue(triggered)
