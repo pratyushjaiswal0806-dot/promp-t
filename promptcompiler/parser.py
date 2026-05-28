@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import re
 from typing import Any
 
 from .entities import extract_entities
@@ -72,7 +73,7 @@ def _segments_from_messages(messages: list[dict[str, Any]]) -> list[Segment]:
 def _segments_from_text(text: str) -> list[Segment]:
     blocks = _split_text_blocks(text)
     return [
-        _make_segment(index, "unknown", _type_from_text(block), block)
+        _make_segment(index, _role_from_text(block), _type_from_text(block), block)
         for index, block in enumerate(blocks, start=1)
     ]
 
@@ -130,7 +131,28 @@ def _type_from_text(text: str) -> str:
         return "tool"
     if "source:" in lower or "citation" in lower:
         return "rag"
+    if lower.startswith(("system:", "system prompt", "you are", "your role")):
+        return "system"
+    if lower.startswith(("task:", "goal:", "objective:", "instruction:")):
+        return "text"
+    if re.match(r"^(?:POST|GET|PUT|DELETE|PATCH|WebSocket)\s+/", text.strip()):
+        return "text"
+    if re.match(r"^\d+\.\s+\w", text.strip()):
+        return "text"
     return "text"
+
+
+def _role_from_text(text: str) -> str:
+    lower = text.lower()
+    if lower.startswith(("system:", "system prompt")):
+        return "system"
+    if lower.startswith(("user:", "human:")):
+        return "user"
+    if lower.startswith(("assistant:", "ai:", "bot:")):
+        return "assistant"
+    if lower.startswith(("task:", "goal:", "objective:")):
+        return "user"
+    return "unknown"
 
 
 def _make_segment(index: int, role: str, segment_type: str, text: str) -> Segment:

@@ -64,7 +64,7 @@ def analyze_v1(payload: dict[str, Any]) -> dict[str, Any]:
     )
     should_compile = analysis["compression_opportunity"] > 0 or (
         budget_utilization is not None and budget_utilization >= 0.7
-    )
+    ) or analysis["total_tokens"] > 800
 
     response = {
         "trace_id": request.trace_id,
@@ -74,6 +74,8 @@ def analyze_v1(payload: dict[str, Any]) -> dict[str, Any]:
         "mode": request.mode,
         "dry_run": request.dry_run,
         "total_tokens": analysis["total_tokens"],
+        "segment_count": analysis["segment_count"],
+        "compression_opportunity": analysis["compression_opportunity"],
         "estimated_input_cost_usd": _estimated_cost(analysis["total_tokens"]),
         "budget_utilization": budget_utilization,
         "pinned_tokens": pinned_tokens,

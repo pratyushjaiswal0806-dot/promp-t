@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
-    "vite": "^7.2.7",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.17.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
-  },
-  "devDependencies": {}
+    "react-dom": "^19.2.1",
+    "react-router-dom": "^7.15.1",
+    "vite": "^7.2.7"
+  }
 }

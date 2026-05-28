@@ -232,6 +232,7 @@ def _build_compile(
         )
 
     warnings.extend(_semantic_warnings(semantic, protected_entities, optimized_text))
+    warnings.extend(_domain_term_warnings(raw_input, optimized_text, protected_entities))
     risk_score = _risk_score(mode, warnings, bool(missing_entities))
     return {
         "optimized_text": optimized_text,
@@ -262,6 +263,10 @@ def _build_compile(
 
 def _derive_current_query(segments: list[Segment]) -> str:
     for segment in reversed(segments):
+        lower = segment.text.lower()
+        if "task:" in lower or "goal:" in lower or "objective:" in lower or "instruction:" in lower:
+            return segment.text
+    for segment in reversed(segments):
         if segment.type not in {"rag", "tool"} and not segment.pinned:
             return segment.text
     for segment in reversed(segments):
@@ -285,6 +290,32 @@ def _semantic_warnings(
     return [
         "Semantic pruning was applied, but protected values are missing from the optimized prompt."
     ]
+
+
+_DOMAIN_TERMS = [
+    "HIPAA", "GDPR", "PCI DSS", "FHIR", "HL7", "OAuth", "JWT",
+    "AES", "TLS", "SSL", "BAA", "PHI", "CME", "NPI",
+    "p95", "p99", "RPO", "RTO",
+]
+
+
+def _domain_term_warnings(
+    raw_input: str,
+    optimized_text: str,
+    protected_entities: list[str],
+) -> list[str]:
+    warnings: list[str] = []
+    missing = []
+    for term in _DOMAIN_TERMS:
+        term_lower = term.lower()
+        if term_lower in raw_input.lower() and term_lower not in optimized_text.lower():
+            missing.append(term)
+    if missing:
+        warnings.append(
+            f"Compressed prompt may be missing critical domain terms: {', '.join(missing[:5])}. "
+            "Consider using lossless mode or adjusting the compression policy."
+        )
+    return warnings
 
 
 def _compact_segment(
@@ -470,12 +501,23 @@ def _summarize_history_segment(
     if not summary:
         summary = text[:240].strip()
     summary = f"[summarized older {segment.type} context]\n{summary}"
-    return summary, max(0, tokens - estimate_text_tokens(summary))
+    summary_tokens = estimate_text_tokens(summary)
+    if summary_tokens >= tokens:
+        return text, 0
+    return summary, max(0, tokens - summary_tokens)
 
 
 def _sentence_fragments(text: str) -> list[str]:
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [part.strip() for part in parts if part.strip()]
+    fragments = []
+    for part in parts:
+        stripped = part.strip()
+        if not stripped:
+            continue
+        if re.match(r"^\d+\.$", stripped) or re.match(r"^\d+\.\s", stripped):
+            continue
+        fragments.append(stripped)
+    return fragments
 
 
 def _validate_mode(mode: str) -> str:

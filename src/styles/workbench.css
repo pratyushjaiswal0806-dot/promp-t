@@ -1,0 +1,97 @@
+/* Workbench IDE layout */
+.workbench-ide {
+  display: flex; flex-direction: column; height: calc(100vh - 60px);
+  background: var(--surface); overflow: hidden;
+}
+
+/* Left sidebar (controls) */
+.workbench-sidebar {
+  width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
+  border-right: 1px solid var(--line); background: var(--surface-dark);
+  overflow-y: auto;
+}
+.workbench-sidebar-header {
+  padding: 0.75rem; border-bottom: 1px solid var(--line); flex-shrink: 0;
+}
+.workbench-sidebar-header select,
+.workbench-sidebar-header input,
+.workbench-sidebar-header button {
+  width: 100%;
+}
+.sidebar-section { padding: 0.5rem 0.75rem; }
+.sidebar-section-title {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin-bottom: 0.4rem;
+}
+
+/* Center + right panels */
+.workbench-main {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+.workbench-editors {
+  flex: 1; display: flex; overflow: hidden; min-height: 0;
+}
+.workbench-input { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--line); min-width: 0; }
+.workbench-output { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* Editor panel headers */
+.editor-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line);
+  font-size: 0.75rem; color: var(--muted); flex-shrink: 0;
+}
+.editor-panel-header .eyebrow { font-size: 0.65rem; }
+
+/* Code editor area */
+.code-editor-area {
+  flex: 1; overflow: auto; padding: 0; display: flex; flex-direction: column; min-height: 0;
+}
+.code-editor-area textarea {
+  flex: 1; min-height: 0; resize: none;
+  width: 100%; background: var(--surface-dark); border: none; outline: none;
+  color: var(--text); padding: 1rem; font-family: var(--font-mono);
+  font-size: 0.85rem; line-height: 1.6;
+}
+
+/* Output area */
+.output-area {
+  flex: 1; overflow: auto; padding: 1rem; min-height: 0;
+  background: var(--surface-dark); font-family: var(--font-mono);
+  font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap;
+  display: flex; flex-direction: column;
+}
+
+/* Floating action bar */
+.floating-action-bar {
+  position: absolute; bottom: 0.75rem; right: 0.75rem;
+  display: flex; gap: 0.5rem; z-index: 10;
+}
+
+/* Savings badge */
+.savings-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.15rem 0.5rem; border-radius: 999px;
+  font-size: 0.65rem; font-weight: 600;
+  background: rgba(199,248,90,0.15); color: var(--accent-lime);
+  border: 1px solid rgba(199,248,90,0.3);
+}
+
+/* Workbench footer (status bar container) */
+.workbench-footer { flex-shrink: 0; }
+
+/* Keyboard shortcut hint */
+.kbd-hint {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.6rem; color: var(--muted);
+}
+.kbd-hint kbd {
+  padding: 0.1rem 0.3rem; border: 1px solid var(--line);
+  border-radius: 2px; font-family: var(--font-mono); font-size: 0.6rem;
+  background: var(--surface);
+}
+
+@media (max-width: 1024px) {
+  .workbench-sidebar { display: none; }
+  .workbench-editors { flex-direction: column; }
+  .workbench-input { border-right: none; border-bottom: 1px solid var(--line); }
+}
