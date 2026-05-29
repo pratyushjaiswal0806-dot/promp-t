@@ -1,59 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600&family=JetBrains+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
 :root {
   color-scheme: dark;
-  --bg: #080907;
-  --bg-gradient-start: #050604;
-  --bg-gradient-middle: #080907;
-  --bg-gradient-end: #10130d;
-  --bg-grid-color: rgba(247, 248, 239, 0.045);
-  --bg-ink: #f7f8ef;
-  --surface: #12140f;
-  --surface-soft: #181b14;
-  --surface-glass: rgba(18, 20, 15, 0.76);
-  --surface-dark: #050604;
-  --text: #f7f8ef;
-  --text-secondary: #aab1a2;
-  --muted: #aab1a2;
-  --muted-dark: #c8cfbd;
-  --line: rgba(247, 248, 239, 0.13);
-  --line-strong: rgba(247, 248, 239, 0.26);
+  --bg: #131411; /* Obsidian */
+  --bg-gradient-start: #131411;
+  --bg-gradient-middle: #131411;
+  --bg-gradient-end: #131411;
+  --bg-grid-color: rgba(255, 255, 255, 0.03);
+  --bg-ink: #ffffff;
+  --surface: #1c1d1a; /* Panel */
+  --surface-soft: #232420;
+  --surface-glass: rgba(19, 20, 17, 0.95);
+  --surface-dark: #0d0e0c;
+  --text: #e5e5e5;
+  --text-secondary: #a0a0a0;
+  --muted: #a0a0a0;
+  --muted-dark: #ffffff;
+  --line: #2d2e2a; /* borderline */
+  --line-strong: #c7f85a; /* lime */
   --accent-lime: #c7f85a;
+  --accent-lime-text: #c7f85a; /* lime text in dark mode */
+  --text-on-accent: #131411; /* always black on bright lime */
   --accent-coral: #ff6f4e;
   --accent-blue: #3f8cff;
   --accent-teal: #0f8c7f;
   --accent-violet: #8b63ff;
-  --danger: #b83d4a;
-  --success: #267246;
-  --warning: #a76a00;
-  --shadow: 0 26px 70px rgba(0, 0, 0, 0.44);
-  --shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.24);
-  --radius-sm: 4px;
-  --radius-md: 7px;
-  --radius-lg: 12px;
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-  --font-headline: 'Anton', 'Impact', sans-serif;
-  --transition: 160ms ease;
+  --danger: #ff5c5c;
+  --success: #c7f85a;
+  --warning: #ffbf00;
+  --shadow: 10px 10px 0 rgba(199, 248, 90, 0.5);
+  --shadow-soft: 5px 5px 0 rgba(255, 255, 255, 0.2);
+  --radius-sm: 0px; /* Stark sharp corners for brutalism */
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --font-serif: 'Playfair Display', serif;
+  --font-headline: 'Playfair Display', serif;
+  --transition: 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f5f5f0;
-  --bg-gradient-start: #fafaf7;
-  --bg-gradient-middle: #f5f5f0;
-  --bg-gradient-end: #eaeae3;
-  --bg-grid-color: rgba(26, 26, 20, 0.035);
-  --bg-ink: #1a1a14;
-  --surface: #e8e9e0;
-  --surface-soft: #dddcd4;
-  --surface-glass: rgba(232, 233, 224, 0.76);
+  --bg: #ffffff;
+  --bg-gradient-start: #ffffff;
+  --bg-gradient-middle: #ffffff;
+  --bg-gradient-end: #ffffff;
+  --bg-grid-color: rgba(19, 20, 17, 0.03);
+  --bg-ink: #131411;
+  --surface: #f0f1eb;
+  --surface-soft: #e5e6df;
+  --surface-glass: rgba(255, 255, 255, 0.95);
   --surface-dark: #fafaf5;
-  --text: #1a1a14;
+  --text: #131411;
   --text-secondary: #5a5d52;
   --muted: #5a5d52;
-  --line: rgba(0, 0, 0, 0.1);
-  --line-strong: rgba(0, 0, 0, 0.2);
-  --shadow: 0 26px 70px rgba(0, 0, 0, 0.1);
-  --shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.06);
+  --line: #131411;
+  --line-strong: #131411;
+  --accent-lime: #c7f85a;
+  --accent-lime-text: #131411; /* black text in light mode for high contrast */
+  --text-on-accent: #131411;
+  --danger: #c82333; /* legible red */
+  --success: #196f3d; /* legible green */
+  --shadow: 10px 10px 0 #131411;
+  --shadow-soft: 5px 5px 0 rgba(19, 20, 17, 0.2);
 }

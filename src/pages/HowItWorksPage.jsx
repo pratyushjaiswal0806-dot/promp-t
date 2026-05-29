@@ -27,15 +27,15 @@ export default function HowItWorksPage({ onNavigate }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {pipelineDetail.map((p) => (
             <FadeIn key={p.number} direction="up">
-              <div className="step-item-clean" style={{ display: "flex", gap: "1.5rem", padding: "1.25rem", border: "1px solid var(--line)", borderRadius: "var(--radius-md)" }}>
-                <span className="step-number-clean" style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--accent-lime)", minWidth: "40px" }}>{p.number}</span>
+              <div className="step-item-clean" style={{ display: "flex", gap: "1.5rem", padding: "1.25rem", border: "4px solid var(--line)", borderRadius: "var(--radius-md)" }}>
+                <span className="step-number-clean" style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--accent-lime-text)", minWidth: "40px" }}>{p.number}</span>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>{p.title}</h3>
                   <p style={{ fontSize: "0.9rem", color: "var(--muted)", lineHeight: 1.6, marginBottom: "0.5rem" }}>{p.body}</p>
-                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", color: "var(--muted)" }}>
-                    <span>Input: <strong style={{ color: "var(--accent-lime)" }}>{p.input}</strong></span>
+                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                    <span>Input: <strong style={{ color: "var(--accent-lime-text)" }}>{p.input}</strong></span>
                     <span>→</span>
-                    <span>Output: <strong style={{ color: "var(--accent-lime)" }}>{p.output}</strong></span>
+                    <span>Output: <strong style={{ color: "var(--accent-lime-text)" }}>{p.output}</strong></span>
                   </div>
                 </div>
               </div>

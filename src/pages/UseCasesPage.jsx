@@ -16,7 +16,7 @@ export default function UseCasesPage({ onNavigate }) {
               <p className="icon-tile-body">{c.body}</p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.75rem" }}>
                 <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{c.outcome}</span>
-                {c.savings && <span className="savings-badge" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.15rem 0.5rem", borderRadius: "999px", fontSize: "0.65rem", fontWeight: 600, background: "rgba(199,248,90,0.15)", color: "var(--accent-lime)", border: "1px solid rgba(199,248,90,0.3)" }}>~{c.savings}</span>}
+                {c.savings && <span className="savings-badge" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.2rem 0.6rem", borderRadius: "0px", fontSize: "0.7rem", fontWeight: 900, background: "rgba(199,248,90,0.15)", color: "var(--accent-lime-text)", border: "2px solid var(--accent-lime-text)", fontFamily: "var(--font-mono)" }}>~{c.savings}</span>}
               </div>
             </div>
           ))}

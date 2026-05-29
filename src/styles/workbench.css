@@ -70,10 +70,10 @@
 /* Savings badge */
 .savings-badge {
   display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.15rem 0.5rem; border-radius: 999px;
-  font-size: 0.65rem; font-weight: 600;
-  background: rgba(199,248,90,0.15); color: var(--accent-lime);
-  border: 1px solid rgba(199,248,90,0.3);
+  padding: 0.15rem 0.5rem; border-radius: 0px;
+  font-size: 0.65rem; font-weight: 900;
+  background: rgba(199,248,90,0.15); color: var(--accent-lime-text);
+  border: 1px solid var(--accent-lime-text);
 }
 
 /* Workbench footer (status bar container) */

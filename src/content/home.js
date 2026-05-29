@@ -27,8 +27,8 @@ export const home = {
     { number: "04", title: "Measure", body: "Shows savings, diffs, lint findings, semantic signals, and trace metadata for review." },
   ],
   useCaseLinks: [
-    { title: "RAG ANSWER ASSEMBLY", body: "Preview code online or bypass... RAG answer assembly to simulate.", target: "use-cases", image: "/rag_answer_assembly.png" },
-    { title: "PROMPT GENERATION", body: "Prompt generation, core data or prompts in generation thresholds.", target: "use-cases", image: "/prompt_generation.png" },
-    { title: "SUPPORT AND RMA CONTEXT", body: "Support and context prep/resolutions when managing support and RMA context.", target: "use-cases", image: "/support_rma_context.png" },
+    { title: "RAG ANSWER ASSEMBLY", body: "Score and prune duplicate retrieved segments. Clean redundant context windows and protect citation integrity before inference.", target: "use-cases", image: "/rag_answer_assembly.png" },
+    { title: "PROMPT GENERATION", body: "Condense long LLM role rulesets and instructions. Eliminate repeated tokens and optimize prompt structures automatically.", target: "use-cases", image: "/prompt_generation.png" },
+    { title: "SUPPORT AND RMA CONTEXT", body: "Retain customer names, support case IDs, dates, and order numbers while safely compressing repeated history logs.", target: "use-cases", image: "/support_rma_context.png" },
   ],
 };

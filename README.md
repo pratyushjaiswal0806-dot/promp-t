@@ -45,7 +45,7 @@ PROJECT_BLUEPRINT.md Combined architecture and roadmap reference
 ## Requirements
 
 - Python 3.11 or newer
-- Node.js 20 or newer
+- Node.js 20 or newerpython3 -m promptcompiler.server
 - npm
 
 The Python code uses the standard library for the local server and core tests. The frontend uses Vite and React.
@@ -56,7 +56,7 @@ The Python code uses the standard library for the local server and core tests. T
 npm install
 cp .env.example .env
 npm run build
-python3 -m promptcompiler.server
+
 ```
 
 Open:

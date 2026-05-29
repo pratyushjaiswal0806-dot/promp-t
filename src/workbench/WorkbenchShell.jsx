@@ -85,11 +85,11 @@ export function WorkbenchShell() {
               <div className="stack-list">
                 {segments.map((s, i) => (
                   <div key={i} className="stack-row" style={{ gap: "0.75rem", alignItems: "flex-start" }}>
-                    <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "var(--radius-sm)", background: s.pinned ? "rgba(199,248,90,0.15)" : "var(--surface-dark)", color: s.pinned ? "var(--accent-lime)" : "var(--muted)", border: "1px solid var(--line)", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "var(--radius-sm)", background: s.pinned ? "rgba(199,248,90,0.15)" : "var(--surface-dark)", color: s.pinned ? "var(--accent-lime-text)" : "var(--muted)", border: "1px solid var(--line)", whiteSpace: "nowrap" }}>
                       {s.type || "text"}
                     </span>
                     <span style={{ fontSize: "0.7rem", color: "var(--muted)", whiteSpace: "nowrap" }}>{s.tokens}t</span>
-                    {s.pinned && <span style={{ fontSize: "0.6rem", color: "var(--accent-lime)" }}>pinned</span>}
+                    {s.pinned && <span style={{ fontSize: "0.6rem", color: "var(--accent-lime-text)" }}>pinned</span>}
                     <span style={{ fontSize: "0.75rem", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {(s.text || s.content || "").slice(0, 100)}{(s.text || s.content || "").length > 100 ? "..." : ""}
                     </span>
@@ -109,7 +109,7 @@ export function WorkbenchShell() {
                     {d.status === "changed" && (
                       <div style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}>
                         <div style={{ color: "var(--danger)", textDecoration: "line-through" }}>- {(d.original_text || "").slice(0, 150)}{(d.original_text || "").length > 150 ? "..." : ""}</div>
-                        <div style={{ color: "var(--accent-lime)" }}>+ {(d.new_text || d.optimized_text || "").slice(0, 150)}{(d.new_text || d.optimized_text || "").length > 150 ? "..." : ""}</div>
+                        <div style={{ color: "var(--accent-lime-text)" }}>+ {(d.new_text || d.optimized_text || "").slice(0, 150)}{(d.new_text || d.optimized_text || "").length > 150 ? "..." : ""}</div>
                       </div>
                     )}
                     {d.status === "removed" && (
