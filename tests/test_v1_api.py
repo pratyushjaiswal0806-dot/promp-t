@@ -5,11 +5,11 @@ from unittest.mock import patch
 import tempfile
 import unittest
 
-from promptcompiler.server import handle_api_request, handle_api_request_with_headers
+from promptcompiler.fastapi_server import handle_api_request, handle_api_request_with_headers
 
 
 def post_v1(path, payload):
-    return handle_api_request("POST", path, json.dumps(payload).encode("utf-8"))
+    return handle_api_request_with_headers("POST", path, json.dumps(payload).encode("utf-8"))[:2]
 
 
 class V1ApiTests(unittest.TestCase):

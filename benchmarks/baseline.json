@@ -1,0 +1,1235 @@
+{
+  "prompt_count": 30,
+  "results": {
+    "dedup-simple-01": {
+      "name": "Two identical short segments",
+      "category": "dedup",
+      "tags": [],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 10,
+          "optimized_tokens": 1,
+          "tokens_saved": 9,
+          "savings_ratio": 0.9,
+          "elapsed_seconds": 0.1237,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "alpha"
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 10,
+          "optimized_tokens": 1,
+          "tokens_saved": 9,
+          "savings_ratio": 0.9,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "alpha"
+        }
+      }
+    },
+    "dedup-simple-02": {
+      "name": "Three identical medium segments",
+      "category": "dedup",
+      "tags": [],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 42,
+          "optimized_tokens": 10,
+          "tokens_saved": 32,
+          "savings_ratio": 0.7619,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "The quick brown fox jumps over the lazy dog."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 42,
+          "optimized_tokens": 10,
+          "tokens_saved": 32,
+          "savings_ratio": 0.7619,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "The quick brown fox jumps over the lazy dog."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 42,
+          "optimized_tokens": 10,
+          "tokens_saved": 32,
+          "savings_ratio": 0.7619,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "The quick brown fox jumps over the lazy dog."
+        }
+      }
+    },
+    "dedup-pinned-03": {
+      "name": "Two identical, one pinned",
+      "category": "dedup",
+      "tags": [
+        "pinned"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 24,
+          "optimized_tokens": 10,
+          "tokens_saved": 14,
+          "savings_ratio": 0.5833,
+          "elapsed_seconds": 0.001,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123 exactly.\n\nremove me"
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 24,
+          "optimized_tokens": 10,
+          "tokens_saved": 14,
+          "savings_ratio": 0.5833,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123 exactly.\n\nremove me"
+        }
+      }
+    },
+    "repeated-logs-04": {
+      "name": "Repeated error log lines",
+      "category": "logs",
+      "tags": [
+        "repeated-lines"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 38,
+          "optimized_tokens": 30,
+          "tokens_saved": 8,
+          "savings_ratio": 0.2105,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "ERROR timeout connecting to db\n[repeated 2 more times]\nWARN retry attempt 1\nINFO connection established\nCASE-901 must survive."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 38,
+          "optimized_tokens": 30,
+          "tokens_saved": 8,
+          "savings_ratio": 0.2105,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "ERROR timeout connecting to db\n[repeated 2 more times]\nWARN retry attempt 1\nINFO connection established\nCASE-901 must survive."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 38,
+          "optimized_tokens": 30,
+          "tokens_saved": 8,
+          "savings_ratio": 0.2105,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "ERROR timeout connecting to db\n[repeated 2 more times]\nWARN retry attempt 1\nINFO connection established\nCASE-901 must survive."
+        }
+      }
+    },
+    "repeated-logs-05": {
+      "name": "Long repeated log block",
+      "category": "logs",
+      "tags": [
+        "repeated-lines"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 36,
+          "optimized_tokens": 16,
+          "tokens_saved": 20,
+          "savings_ratio": 0.5556,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "ERROR timeout connecting to db\n[repeated 4 more times]\ntail line"
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 36,
+          "optimized_tokens": 16,
+          "tokens_saved": 20,
+          "savings_ratio": 0.5556,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "ERROR timeout connecting to db\n[repeated 4 more times]\ntail line"
+        }
+      }
+    },
+    "json-compact-06": {
+      "name": "JSON config payload",
+      "category": "json",
+      "tags": [
+        "json-minify"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 65,
+          "optimized_tokens": 41,
+          "tokens_saved": 24,
+          "savings_ratio": 0.3692,
+          "elapsed_seconds": 0.0007,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "{\"frequency_penalty\":0.0,\"max_tokens\":2048,\"model\":\"gpt-4\",\"temperature\":0.7,\"top_p\":1.0}\n\n@pin Keep CASE-456."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 65,
+          "optimized_tokens": 41,
+          "tokens_saved": 24,
+          "savings_ratio": 0.3692,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "{\"frequency_penalty\":0.0,\"max_tokens\":2048,\"model\":\"gpt-4\",\"temperature\":0.7,\"top_p\":1.0}\n\n@pin Keep CASE-456."
+        }
+      }
+    },
+    "json-compact-07": {
+      "name": "Nested JSON with arrays",
+      "category": "json",
+      "tags": [
+        "json-minify"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 19,
+          "optimized_tokens": 11,
+          "tokens_saved": 8,
+          "savings_ratio": 0.4211,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "You are a helpful assistant.\n\nExplain quantum computing."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 19,
+          "optimized_tokens": 11,
+          "tokens_saved": 8,
+          "savings_ratio": 0.4211,
+          "elapsed_seconds": 0.0002,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "You are a helpful assistant.\n\nExplain quantum computing."
+        }
+      }
+    },
+    "markdown-headings-08": {
+      "name": "Markdown with headings and lists",
+      "category": "markdown",
+      "tags": [
+        "markdown-minify"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 76,
+          "optimized_tokens": 50,
+          "tokens_saved": 26,
+          "savings_ratio": 0.3421,
+          "elapsed_seconds": 0.0013,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 5,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Project Plan\n\nOverview\nThis project aims to build a robust compiler.\n\nTimeline\nPhase 1: Design\nPhase 2: Implementation\nPhase 3: Testing\n\nBudget\nKeep CASE-789 within scope.\n\nConclusion\nThe plan is approved."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 76,
+          "optimized_tokens": 50,
+          "tokens_saved": 26,
+          "savings_ratio": 0.3421,
+          "elapsed_seconds": 0.0007,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 5,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "Project Plan\n\nOverview\nThis project aims to build a robust compiler.\n\nTimeline\nPhase 1: Design\nPhase 2: Implementation\nPhase 3: Testing\n\nBudget\nKeep CASE-789 within scope.\n\nConclusion\nThe plan is approved."
+        }
+      }
+    },
+    "markdown-headings-09": {
+      "name": "Markdown with code blocks",
+      "category": "markdown",
+      "tags": [
+        "markdown-minify"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 60,
+          "optimized_tokens": 42,
+          "tokens_saved": 18,
+          "savings_ratio": 0.3,
+          "elapsed_seconds": 0.0008,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Installation\n\n```bash\npip install promptcompiler\n```\n\nUsage\n\n```python\nfrom promptcompiler import compile_prompt\nresult = compile_prompt(\"hello world\")\n```\n\n@pin Keep PROJ-123."
+        }
+      }
+    },
+    "rag-multi-source-10": {
+      "name": "Two duplicate RAG sources (no entities)",
+      "category": "rag",
+      "tags": [
+        "rag-prune"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 54,
+          "optimized_tokens": 25,
+          "tokens_saved": 29,
+          "savings_ratio": 0.537,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Question: What is the refund policy?\n\nSource: doc-a\nThe refund policy allows returns within 30 days of purchase."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 54,
+          "optimized_tokens": 25,
+          "tokens_saved": 29,
+          "savings_ratio": 0.537,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "Question: What is the refund policy?\n\nSource: doc-a\nThe refund policy allows returns within 30 days of purchase."
+        }
+      }
+    },
+    "rag-multi-source-11": {
+      "name": "Duplicate RAG sources with same entity",
+      "category": "rag",
+      "tags": [
+        "rag-prune",
+        "entities"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 60,
+          "optimized_tokens": 29,
+          "tokens_saved": 31,
+          "savings_ratio": 0.5167,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Question: Can I return item CASE-345?\n\nSource: doc-a\nThe refund policy allows returns within 30 days for CASE-345."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 60,
+          "optimized_tokens": 29,
+          "tokens_saved": 31,
+          "savings_ratio": 0.5167,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "Question: Can I return item CASE-345?\n\nSource: doc-a\nThe refund policy allows returns within 30 days for CASE-345."
+        }
+      }
+    },
+    "rag-paraphrase-12": {
+      "name": "Paraphrased RAG documents",
+      "category": "rag",
+      "tags": [
+        "rag-embedding",
+        "paraphrase"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 55,
+          "optimized_tokens": 25,
+          "tokens_saved": 30,
+          "savings_ratio": 0.5455,
+          "elapsed_seconds": 0.0084,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Question: Do refunds over 500 need manager approval?\n\nSource: doc-a\nRefunds over 500 require manager approval."
+        }
+      }
+    },
+    "rag-pinned-13": {
+      "name": "Pinned RAG segments kept across modes",
+      "category": "rag",
+      "tags": [
+        "rag-prune",
+        "pinned"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 55,
+          "optimized_tokens": 55,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0007,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "Question: What is the budget?\n\n@pin Source: doc-a\nThe budget for CASE-999 is $50,000.\n\nSource: doc-b\nThe budget allocation for next quarter is $50,000."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 55,
+          "optimized_tokens": 55,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Question: What is the budget?\n\n@pin Source: doc-a\nThe budget for CASE-999 is $50,000.\n\nSource: doc-b\nThe budget allocation for next quarter is $50,000."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 55,
+          "optimized_tokens": 55,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "Question: What is the budget?\n\n@pin Source: doc-a\nThe budget for CASE-999 is $50,000.\n\nSource: doc-b\nThe budget allocation for next quarter is $50,000."
+        }
+      }
+    },
+    "tool-output-14": {
+      "name": "Short tool-style output",
+      "category": "tool",
+      "tags": [
+        "tool-output"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 33,
+          "optimized_tokens": 33,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "Function call: search_docs(query=\"refund policy\")\nResult: found 3 documents.\nProcessing complete.\n\nFollow up with user."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 33,
+          "optimized_tokens": 33,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "Function call: search_docs(query=\"refund policy\")\nResult: found 3 documents.\nProcessing complete.\n\nFollow up with user."
+        }
+      }
+    },
+    "tool-output-long-15": {
+      "name": "Large tool output truncated in aggressive",
+      "category": "tool",
+      "tags": [
+        "tool-truncate"
+      ],
+      "modes": {
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 192,
+          "optimized_tokens": 14,
+          "tokens_saved": 178,
+          "savings_ratio": 0.9271,
+          "elapsed_seconds": 0.0019,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "[tool summary]\nURL: https://example.com/CASE-555"
+        }
+      }
+    },
+    "chat-messages-16": {
+      "name": "Simple two-turn chat",
+      "category": "chat",
+      "tags": [
+        "chat"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 34,
+          "optimized_tokens": 22,
+          "tokens_saved": 12,
+          "savings_ratio": 0.3529,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin You are a helpful assistant.\n\nWhat is the capital of France?\n\nParis is the capital of France."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 34,
+          "optimized_tokens": 22,
+          "tokens_saved": 12,
+          "savings_ratio": 0.3529,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin You are a helpful assistant.\n\nWhat is the capital of France?\n\nParis is the capital of France."
+        }
+      }
+    },
+    "chat-messages-17": {
+      "name": "Chat with repeated assistant response",
+      "category": "chat",
+      "tags": [
+        "chat",
+        "dedup"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 44,
+          "optimized_tokens": 21,
+          "tokens_saved": 23,
+          "savings_ratio": 0.5227,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Follow policy DOC-001.\n\nSummarize the ticket.\n\nI will review the ticket details."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 44,
+          "optimized_tokens": 21,
+          "tokens_saved": 23,
+          "savings_ratio": 0.5227,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Follow policy DOC-001.\n\nSummarize the ticket.\n\nI will review the ticket details."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 44,
+          "optimized_tokens": 21,
+          "tokens_saved": 23,
+          "savings_ratio": 0.5227,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "@pin Follow policy DOC-001.\n\nSummarize the ticket.\n\nI will review the ticket details."
+        }
+      }
+    },
+    "chat-messages-18": {
+      "name": "Chat with tool output",
+      "category": "chat",
+      "tags": [
+        "chat",
+        "tool-output",
+        "repeated-lines"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 67,
+          "optimized_tokens": 67,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "{\"messages\":[{\"role\":\"system\",\"content\":\"@pin You are a support agent.\"},{\"role\":\"user\",\"content\":\"Check status for CASE-777.\"},{\"role\":\"tool\",\"content\":\"Status: open\nPriority: high\nAssigned: John\nStatus: open\nPriority: high\nAssigned: John\"}]}"
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 67,
+          "optimized_tokens": 67,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "{\"messages\":[{\"role\":\"system\",\"content\":\"@pin You are a support agent.\"},{\"role\":\"user\",\"content\":\"Check status for CASE-777.\"},{\"role\":\"tool\",\"content\":\"Status: open\nPriority: high\nAssigned: John\nStatus: open\nPriority: high\nAssigned: John\"}]}"
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 67,
+          "optimized_tokens": 67,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0003,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "{\"messages\":[{\"role\":\"system\",\"content\":\"@pin You are a support agent.\"},{\"role\":\"user\",\"content\":\"Check status for CASE-777.\"},{\"role\":\"tool\",\"content\":\"Status: open\nPriority: high\nAssigned: John\nStatus: open\nPriority: high\nAssigned: John\"}]}"
+        }
+      }
+    },
+    "mixed-pinned-19": {
+      "name": "Mixed content with multiple pins",
+      "category": "mixed",
+      "tags": [
+        "pinned",
+        "entity-protection"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 47,
+          "optimized_tokens": 47,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Always follow HIPAA guidelines.\n\nGeneral instructions for patient data handling.\n\n@pin Encrypt all PHI using AES-256.\n\nAdditional notes about data retention."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 47,
+          "optimized_tokens": 47,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Always follow HIPAA guidelines.\n\nGeneral instructions for patient data handling.\n\n@pin Encrypt all PHI using AES-256.\n\nAdditional notes about data retention."
+        }
+      }
+    },
+    "mixed-pinned-20": {
+      "name": "Complex mix of pinned, duplicate, logs",
+      "category": "mixed",
+      "tags": [
+        "pinned",
+        "dedup",
+        "repeated-lines"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 60,
+          "optimized_tokens": 38,
+          "tokens_saved": 22,
+          "savings_ratio": 0.3667,
+          "elapsed_seconds": 0.0009,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123 exactly.\n\nERROR crash loop\n[repeated 2 more times]\n\n@pin Preserve URL: https://example.com/ticket/456\n\nCleanup completed successfully."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 60,
+          "optimized_tokens": 38,
+          "tokens_saved": 22,
+          "savings_ratio": 0.3667,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123 exactly.\n\nERROR crash loop\n[repeated 2 more times]\n\n@pin Preserve URL: https://example.com/ticket/456\n\nCleanup completed successfully."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 60,
+          "optimized_tokens": 38,
+          "tokens_saved": 22,
+          "savings_ratio": 0.3667,
+          "elapsed_seconds": 0.001,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 2,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123 exactly.\n\nERROR crash loop\n[repeated 2 more times]\n\n@pin Preserve URL: https://example.com/ticket/456\n\nCleanup completed successfully."
+        }
+      }
+    },
+    "mixed-long-21": {
+      "name": "Long prompt with all patterns",
+      "category": "mixed",
+      "tags": [
+        "pinned",
+        "dedup",
+        "rag-prune",
+        "repeated-lines"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 160,
+          "optimized_tokens": 82,
+          "tokens_saved": 78,
+          "savings_ratio": 0.4875,
+          "elapsed_seconds": 0.0018,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 4,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin You are an expert coding assistant.\n\nUser request: Write a Python function to sort a list.\n\nSource: docs/sorting_guide.md\nSorting can be done using the built-in sorted() function or list.sort() method.\n\nAssistant response:\nHere is a sorting function.\n\ndef sort_list(items):\n    return sorted(items)\n\nERROR placeholder\n[repeated 1 more times]\n\nCASE-888 must stay."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 160,
+          "optimized_tokens": 82,
+          "tokens_saved": 78,
+          "savings_ratio": 0.4875,
+          "elapsed_seconds": 0.0012,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 4,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin You are an expert coding assistant.\n\nUser request: Write a Python function to sort a list.\n\nSource: docs/sorting_guide.md\nSorting can be done using the built-in sorted() function or list.sort() method.\n\nAssistant response:\nHere is a sorting function.\n\ndef sort_list(items):\n    return sorted(items)\n\nERROR placeholder\n[repeated 1 more times]\n\nCASE-888 must stay."
+        }
+      }
+    },
+    "code-gen-22": {
+      "name": "Code generation with project context",
+      "category": "code",
+      "tags": [
+        "code",
+        "pinned"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 61,
+          "optimized_tokens": 48,
+          "tokens_saved": 13,
+          "savings_ratio": 0.2131,
+          "elapsed_seconds": 0.0008,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Use Python 3.11+.\n\nCreate a FastAPI endpoint that:\nAccepts POST /api/users\nValidates email format\nStores user in database\nReturns 201 on success\n\nFollow project conventions from DOC-222."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 61,
+          "optimized_tokens": 48,
+          "tokens_saved": 13,
+          "savings_ratio": 0.2131,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Use Python 3.11+.\n\nCreate a FastAPI endpoint that:\nAccepts POST /api/users\nValidates email format\nStores user in database\nReturns 201 on success\n\nFollow project conventions from DOC-222."
+        }
+      }
+    },
+    "code-gen-23": {
+      "name": "Code review prompt with duplicate examples",
+      "category": "code",
+      "tags": [
+        "code",
+        "dedup"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 83,
+          "optimized_tokens": 43,
+          "tokens_saved": 40,
+          "savings_ratio": 0.4819,
+          "elapsed_seconds": 0.001,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Review this code for security issues.\n\n```python\ndef get_user(id):\n    return db.query(f\"SELECT * FROM users WHERE id = {id}\")\n```\n\nThis code has an SQL injection vulnerability."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 83,
+          "optimized_tokens": 43,
+          "tokens_saved": 40,
+          "savings_ratio": 0.4819,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Review this code for security issues.\n\n```python\ndef get_user(id):\n    return db.query(f\"SELECT * FROM users WHERE id = {id}\")\n```\n\nThis code has an SQL injection vulnerability."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 83,
+          "optimized_tokens": 43,
+          "tokens_saved": 40,
+          "savings_ratio": 0.4819,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 1,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "@pin Review this code for security issues.\n\n```python\ndef get_user(id):\n    return db.query(f\"SELECT * FROM users WHERE id = {id}\")\n```\n\nThis code has an SQL injection vulnerability."
+        }
+      }
+    },
+    "multi-turn-24": {
+      "name": "Long multi-turn conversation",
+      "category": "chat",
+      "tags": [
+        "chat",
+        "multi-turn"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 86,
+          "optimized_tokens": 54,
+          "tokens_saved": 32,
+          "savings_ratio": 0.3721,
+          "elapsed_seconds": 0.001,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin You are a travel assistant.\n\nBook a flight to Tokyo.\n\nSure, I can help with that.\n\nI need a non-stop flight.\n\nLet me check available non-stop flights.\n\nPrefer morning departures.\n\nMorning flights available.\n\nConfirm booking for RES-333."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 86,
+          "optimized_tokens": 54,
+          "tokens_saved": 32,
+          "savings_ratio": 0.3721,
+          "elapsed_seconds": 0.0007,
+          "entity_entities_checked": 1,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin You are a travel assistant.\n\nBook a flight to Tokyo.\n\nSure, I can help with that.\n\nI need a non-stop flight.\n\nLet me check available non-stop flights.\n\nPrefer morning departures.\n\nMorning flights available.\n\nConfirm booking for RES-333."
+        }
+      }
+    },
+    "multi-turn-25": {
+      "name": "Conversation with repeated context",
+      "category": "chat",
+      "tags": [
+        "chat",
+        "multi-turn",
+        "redundant-context"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 84,
+          "optimized_tokens": 56,
+          "tokens_saved": 28,
+          "savings_ratio": 0.3333,
+          "elapsed_seconds": 0.0009,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin The user is working on Project ALPHA.\n\nWhat is the status of Project ALPHA?\n\nProject ALPHA is on track.\n\nWhat about Project ALPHA milestones?\n\nProject ALPHA milestones are due next week.\n\nWho is working on Project ALPHA?\n\nThe team working on Project ALPHA includes Alice and Bob."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 84,
+          "optimized_tokens": 56,
+          "tokens_saved": 28,
+          "savings_ratio": 0.3333,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin The user is working on Project ALPHA.\n\nWhat is the status of Project ALPHA?\n\nProject ALPHA is on track.\n\nWhat about Project ALPHA milestones?\n\nProject ALPHA milestones are due next week.\n\nWho is working on Project ALPHA?\n\nThe team working on Project ALPHA includes Alice and Bob."
+        }
+      }
+    },
+    "entity-protection-26": {
+      "name": "Multiple entity types protected",
+      "category": "entities",
+      "tags": [
+        "entity-protection"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 102,
+          "optimized_tokens": 102,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0009,
+          "entity_entities_checked": 5,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Follow PCI DSS standards.\n\nCustomer data: credit card ****4242.\n\nServer: AWS EC2 instance i-1234567890abcdef0.\n\nDeploy with Docker on Kubernetes.\n\nError at 2026-05-29 14:30:00 UTC.\n\nCustomer ID: 550e8400-e29b-41d4-a716-446655440000."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 102,
+          "optimized_tokens": 102,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0006,
+          "entity_entities_checked": 5,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Follow PCI DSS standards.\n\nCustomer data: credit card ****4242.\n\nServer: AWS EC2 instance i-1234567890abcdef0.\n\nDeploy with Docker on Kubernetes.\n\nError at 2026-05-29 14:30:00 UTC.\n\nCustomer ID: 550e8400-e29b-41d4-a716-446655440000."
+        }
+      }
+    },
+    "entity-protection-27": {
+      "name": "Compiled entities checked in aggressive",
+      "category": "entities",
+      "tags": [
+        "entity-protection",
+        "aggressive"
+      ],
+      "modes": {
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 83,
+          "optimized_tokens": 83,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0008,
+          "entity_entities_checked": 7,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "@pin Keep JWT token auth.\n\nUse OAuth2 for API security.\n\nRate limit: 1000 req/s per user.\n\nResponse time target: p99 < 200ms.\n\nDeploy with Terraform on AWS S3.\n\nIP range: 10.0.0.0/24."
+        }
+      }
+    },
+    "budget-capped-28": {
+      "name": "Tight token budget with pins",
+      "category": "budget",
+      "tags": [
+        "budget"
+      ],
+      "modes": {
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 72,
+          "optimized_tokens": 72,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0008,
+          "entity_entities_checked": 2,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Keep CASE-123.\n\nSome verbose content here for testing purposes that should be removed when budget is tight.\n\nMore verbose text that takes up many tokens unnecessarily for testing.\n\n@pin Also keep CASE-456.\n\nExtra verbose text that can be safely dropped."
+        }
+      }
+    },
+    "emptyish-29": {
+      "name": "Nearly empty input with pin",
+      "category": "edge",
+      "tags": [
+        "edge-case"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 10,
+          "optimized_tokens": 10,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0002,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "@pin Just keep this."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 10,
+          "optimized_tokens": 10,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0001,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "@pin Just keep this."
+        },
+        "aggressive": {
+          "mode": "aggressive",
+          "original_tokens": 10,
+          "optimized_tokens": 10,
+          "tokens_saved": 0,
+          "savings_ratio": 0.0,
+          "elapsed_seconds": 0.0001,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 0,
+          "risk_score": 0.58,
+          "warnings": [],
+          "optimized_text": "@pin Just keep this."
+        }
+      }
+    },
+    "all-duplicate-30": {
+      "name": "All segments are duplicates",
+      "category": "edge",
+      "tags": [
+        "edge-case",
+        "dedup"
+      ],
+      "modes": {
+        "lossless": {
+          "mode": "lossless",
+          "original_tokens": 44,
+          "optimized_tokens": 8,
+          "tokens_saved": 36,
+          "savings_ratio": 0.8182,
+          "elapsed_seconds": 0.0005,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 5,
+          "risk_score": 0.05,
+          "warnings": [],
+          "optimized_text": "duplicate\n\n@pin Keep this one."
+        },
+        "balanced": {
+          "mode": "balanced",
+          "original_tokens": 44,
+          "optimized_tokens": 8,
+          "tokens_saved": 36,
+          "savings_ratio": 0.8182,
+          "elapsed_seconds": 0.0004,
+          "entity_entities_checked": 0,
+          "entity_entities_missing": 0,
+          "entity_preservation_ok": true,
+          "changes_count": 5,
+          "risk_score": 0.28,
+          "warnings": [],
+          "optimized_text": "duplicate\n\n@pin Keep this one."
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 from unittest.mock import patch
 
-from promptcompiler.server import PromptCompilerHandler
+from promptcompiler.fastapi_server import PromptCompilerHandler
 
 
 class WebE2ETests(unittest.TestCase):

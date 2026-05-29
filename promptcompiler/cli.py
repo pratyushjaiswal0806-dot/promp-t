@@ -11,6 +11,7 @@ from typing import Any
 from .analyzer import analyze_prompt
 from .compiler import CompilePolicyError, compile_prompt
 from .models import DEFAULT_NIM_MODEL, list_models
+from .smoke import smoke_test
 from .v1 import lint_v1, retrieve_v1
 
 
@@ -39,6 +40,16 @@ def run_cli(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "compile":
+        if args.smoke_test:
+            result = smoke_test(text, model=args.model, mode=args.mode, target_token_budget=args.target_token_budget)
+            passed = len(result["passed"])
+            failed = len(result["failed"])
+            print(json.dumps({k: v for k, v in result.items() if k != "optimized_text"}, indent=2))
+            if failed:
+                print(f"SMOKE TEST FAILED ({failed} failures, {passed} passed)")
+                return 1
+            print(f"SMOKE TEST PASSED ({passed} checks)")
+            return 0
         try:
             result = compile_prompt(text, model=args.model, mode=args.mode, target_token_budget=args.target_token_budget, dry_run=args.dry_run)
         except CompilePolicyError as exc:
@@ -78,6 +89,7 @@ def _build_parser() -> argparse.ArgumentParser:
     compile_cmd.add_argument("--mode", choices=["lossless", "balanced", "aggressive"], default="lossless")
     compile_cmd.add_argument("--target-token-budget", type=int, default=None, help="Target token budget for compression")
     compile_cmd.add_argument("--dry-run", action="store_true", help="Show compression plan without mutating")
+    compile_cmd.add_argument("--smoke-test", action="store_true", help="Run smoke-test validation instead of normal compilation")
     compile_cmd.add_argument("--out", help="Write optimized text to this file")
 
     lint_cmd = subcommands.add_parser("lint", help="Lint a prompt for token waste")

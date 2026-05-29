@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from promptcompiler.nim import NimRequestError
-from promptcompiler.server import WEB_ROOT, _static_file_for_request, handle_api_request
+from promptcompiler.fastapi_server import WEB_ROOT, _static_file_for_request, handle_api_request
 
 
 class ServerTests(unittest.TestCase):
@@ -69,7 +69,7 @@ class ServerTests(unittest.TestCase):
         )
         with (
             patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=True),
-            patch("promptcompiler.server.NimClient.from_env") as from_env,
+            patch("promptcompiler.fastapi_server.NimClient.from_env") as from_env,
         ):
             from_env.return_value.summarize.side_effect = error
             status, response = handle_api_request(
@@ -102,7 +102,7 @@ class ServerTests(unittest.TestCase):
         )
         with (
             patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=True),
-            patch("promptcompiler.server.NimClient.from_env") as from_env,
+            patch("promptcompiler.fastapi_server.NimClient.from_env") as from_env,
         ):
             from_env.return_value.generate_extensive_prompt.return_value = {
                 "generated_prompt": generated,

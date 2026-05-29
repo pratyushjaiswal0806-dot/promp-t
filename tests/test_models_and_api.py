@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from promptcompiler.models import DEFAULT_NIM_MODEL, list_models
-from promptcompiler.server import handle_api_request
+from promptcompiler.fastapi_server import handle_api_request
 
 
 class ModelAndApiTests(unittest.TestCase):
@@ -33,7 +33,7 @@ class ModelAndApiTests(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=True),
-            patch("promptcompiler.server.NimClient.from_env") as from_env,
+            patch("promptcompiler.fastapi_server.NimClient.from_env") as from_env,
         ):
             from_env.return_value.list_available_models.return_value = live_models
             status, body = handle_api_request("GET", "/api/models", b"")
@@ -51,7 +51,7 @@ class ModelAndApiTests(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=True),
-            patch("promptcompiler.server.NimClient.from_env") as from_env,
+            patch("promptcompiler.fastapi_server.NimClient.from_env") as from_env,
         ):
             from_env.return_value.list_available_models.return_value = live_models
             status, body = handle_api_request("GET", "/api/models", b"")
@@ -72,7 +72,7 @@ class ModelAndApiTests(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=True),
-            patch("promptcompiler.server.NimClient.from_env") as from_env,
+            patch("promptcompiler.fastapi_server.NimClient.from_env") as from_env,
         ):
             from_env.return_value.list_available_models.return_value = live_models
             status, body = handle_api_request("GET", "/api/models", b"")

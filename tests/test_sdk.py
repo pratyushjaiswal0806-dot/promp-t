@@ -9,7 +9,7 @@ import os
 
 import promptcompiler
 from promptcompiler.sdk import PromptCompilerClient
-from promptcompiler.server import PromptCompilerHandler
+from promptcompiler.fastapi_server import PromptCompilerHandler
 
 
 class FakeCompletions:

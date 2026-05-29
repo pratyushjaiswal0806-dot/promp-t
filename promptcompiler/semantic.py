@@ -140,6 +140,7 @@ def _score_chunks_lexical(
                 "compression_risk_score": round(risk, 4),
                 "decision": "retained",
                 "scorer": policy["scorer"],
+                "_token_set": tokens,
             }
         )
 
@@ -178,6 +179,7 @@ def _score_chunks_with_embeddings(
                 "decision": "retained",
                 "scorer": policy["scorer"],
                 "_embedding_vector": chunk_vector,
+                "_token_set": _semantic_tokens(str(chunk.get("text", ""))),
             }
         )
 
@@ -210,6 +212,7 @@ def build_semantic_report(
     decisions: list[dict[str, Any]] = []
     removed_chunk_ids: set[str] = set()
     removed_segment_ids: set[str] = set()
+    token_sets = {chunk["id"]: chunk["_token_set"] for chunk in scored if "_token_set" in chunk}
 
     if mode in {"balanced", "aggressive"}:
         threshold = 0.78 if mode == "balanced" else 0.62
@@ -231,7 +234,7 @@ def build_semantic_report(
             cross_segment_retained = [
                 c for c in retained_rag if c["segment_id"] != chunk["segment_id"]
             ]
-            redundant_with = _similar_retained_chunk(chunk, cross_segment_retained, threshold, policy, embedding_vectors)
+            redundant_with = _similar_retained_chunk(chunk, cross_segment_retained, threshold, policy, embedding_vectors, token_sets)
             if (
                 redundant_with is not None
                 and float(chunk["query_relevance_score"])
@@ -401,6 +404,7 @@ def _similar_retained_chunk(
     threshold: float,
     policy: dict[str, Any],
     embedding_vectors: dict[str, list[float]] | None = None,
+    token_sets: dict[str, set[str]] | None = None,
 ) -> dict[str, Any] | None:
     if policy["scorer"] == "embedding":
         chunk_vector = (embedding_vectors or {}).get(chunk.get("id", ""))
@@ -418,11 +422,15 @@ def _similar_retained_chunk(
                 best_similarity = similarity
         return best
 
-    chunk_tokens = _semantic_tokens(str(chunk.get("text", "")))
+    chunk_tokens = (token_sets or {}).get(chunk.get("id")) or _semantic_tokens(str(chunk.get("text", "")))
     best: dict[str, Any] | None = None
     best_similarity = 0.0
     for candidate in retained:
-        similarity = _jaccard(chunk_tokens, _semantic_tokens(str(candidate.get("text", ""))))
+        cand_id = candidate.get("id")
+        cand_tokens = (token_sets or {}).get(cand_id) if token_sets else None
+        if cand_tokens is None:
+            cand_tokens = _semantic_tokens(str(candidate.get("text", "")))
+        similarity = _jaccard(chunk_tokens, cand_tokens)
         if similarity >= threshold and similarity > best_similarity:
             best = candidate
             best_similarity = similarity

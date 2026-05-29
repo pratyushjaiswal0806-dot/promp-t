@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from promptcompiler.server import ROOT, WEB_ROOT, _content_type, _static_file_for_request
+from promptcompiler.fastapi_server import ROOT, WEB_ROOT, _content_type, _static_file_for_request
 
 APP_SOURCE = ROOT / "src" / "App.jsx"
 STYLE_SOURCE = ROOT / "src" / "styles.css"

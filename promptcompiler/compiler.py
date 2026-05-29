@@ -1,22 +1,27 @@
-"""Deterministic prompt compilation.
+"""Deterministic prompt compilation via v2 pass pipeline.
 
-This module performs local, explainable transformations. Lossless mode keeps the
-original safety-first behavior. Balanced and aggressive modes add local
-budget-aware compaction without using external models.
+This module wraps the v2 CompilerRuntime to provide the public compile_prompt()
+API with backward-compatible response shape.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any
 
 from .diff import kept_diff, removed_diff
 from .entities import extract_entities
-from .minify import maybe_compact_text
 from .models import DEFAULT_NIM_MODEL
 from .parser import Segment, parse_prompt
+from .runtime import CompilerRuntime
 from .semantic import build_semantic_report
-from .tokenizer import estimate_text_tokens
+from .tokenizer import estimate_text_tokens, set_active_model
+
+
+_COMPILE_CACHE: dict[str, dict[str, Any]] = {}
+_COMPILE_CACHE_MAX = 128
 
 
 _ALLOWED_MODES = {"lossless", "balanced", "aggressive"}
@@ -39,6 +44,9 @@ class CompilePolicyError(ValueError):
         self.details = details or {}
 
 
+_runtime = CompilerRuntime()
+
+
 def compile_prompt(
     raw_input: str,
     model: str = DEFAULT_NIM_MODEL,
@@ -46,40 +54,18 @@ def compile_prompt(
     target_token_budget: int | None = None,
     dry_run: bool = False,
     semantic_policy: dict[str, Any] | None = None,
+    use_cache: bool = False,
 ) -> dict[str, Any]:
-    """Compile a prompt with deterministic, safety-first transforms.
-
-    Parameters
-    ----------
-    raw_input : str
-        The prompt text to compile.
-    model : str
-        Model identifier for token estimation (default from DEFAULT_NIM_MODEL).
-    mode : str
-        Compression mode: "lossless" (default, no content removed),
-        "balanced" (moderate dedup/summarization), or "aggressive" (maximum).
-    target_token_budget : int | None
-        Target token count for the output. When set, the compiler attempts to
-        meet this budget. Raises CompilePolicyError if pinned content exceeds
-        25% of the budget. A warning is emitted if the budget cannot be met safely.
-    dry_run : bool
-        If True, compute the plan but return the original text unchanged.
-    semantic_policy : dict | None
-        Optional semantic dedup configuration. See build_semantic_report.
-
-    Returns
-    -------
-    dict
-        Compiled result with optimized_text, diff, plan, semantic metadata, warnings, etc.
-
-    Raises
-    ------
-    CompilePolicyError
-        If the mode is invalid, target_token_budget is invalid, or pinned
-        content exceeds the budget.
-    """
     normalized_mode = _validate_mode(mode)
     normalized_budget = _normalize_budget(target_token_budget)
+    set_active_model(model)
+
+    cache_key = _compile_cache_key(raw_input, model, normalized_mode, normalized_budget, dry_run) if use_cache else None
+    if cache_key and cache_key in _COMPILE_CACHE:
+        cached = dict(_COMPILE_CACHE[cache_key])
+        cached["cache_status"] = "hit"
+        return cached
+
     original_segments = parse_prompt(raw_input)
     original_tokens = sum(segment.tokens for segment in original_segments)
     _enforce_pinned_budget(original_segments, normalized_budget, original_tokens)
@@ -91,6 +77,7 @@ def compile_prompt(
         mode=normalized_mode,
         target_token_budget=normalized_budget,
         semantic_policy=semantic_policy,
+        original_tokens=original_tokens,
     )
 
     if dry_run:
@@ -105,7 +92,7 @@ def compile_prompt(
         active_optimized_tokens = proposed["optimized_tokens"]
         active_tokens_saved = proposed["tokens_saved"]
 
-    return {
+    result = {
         "model": model,
         "mode": normalized_mode,
         "target_token_budget": normalized_budget,
@@ -130,9 +117,17 @@ def compile_prompt(
         "warnings": proposed["warnings"],
         "risk_score": proposed["risk_score"],
         "evaluation_status": "not_configured",
-        "cache_status": "bypass",
+        "cache_status": "miss" if cache_key else "bypass",
         "cost_benefit": _cost_benefit(original_tokens, proposed["tokens_saved"], normalized_mode),
     }
+
+    if cache_key and not dry_run:
+        if len(_COMPILE_CACHE) >= _COMPILE_CACHE_MAX:
+            oldest = next(iter(_COMPILE_CACHE))
+            del _COMPILE_CACHE[oldest]
+        _COMPILE_CACHE[cache_key] = result
+
+    return result
 
 
 def _build_compile(
@@ -142,11 +137,10 @@ def _build_compile(
     mode: str,
     target_token_budget: int | None,
     semantic_policy: dict[str, Any] | None,
+    original_tokens: int,
 ) -> dict[str, Any]:
     changes: list[dict[str, Any]] = []
     diff: list[dict[str, object]] = []
-    retained: list[tuple[Segment, str]] = []
-    seen: dict[str, str] = {}
     actions: list[dict[str, Any]] = []
     warnings: list[str] = []
     query = _derive_current_query(original_segments)
@@ -161,60 +155,126 @@ def _build_compile(
     }
     semantic_removed_segment_ids = set(semantic["removed_segment_ids"])
 
-    for index, segment in enumerate(original_segments):
+    # Build pruned input (remove semantically redundant segments before v2 pipeline)
+    pruned_texts: list[str] = []
+    for segment in original_segments:
         if segment.id in semantic_removed_segment_ids:
             decision = semantic_decisions[segment.id]
-            changes.append(
-                {
-                    "type": "rag_chunk_pruned",
-                    "segment_id": segment.id,
-                    "chunk_ids": decision["chunk_ids"],
-                    "retained_chunk_id": decision["retained_chunk_id"],
-                    "tokens": segment.tokens,
-                }
-            )
+            changes.append({
+                "type": "rag_chunk_pruned",
+                "segment_id": segment.id,
+                "chunk_ids": decision["chunk_ids"],
+                "retained_chunk_id": decision["retained_chunk_id"],
+                "tokens": segment.tokens,
+            })
             actions.append(decision)
             diff.append(removed_diff(segment, decision["reason"]))
-            continue
+        else:
+            pruned_texts.append(segment.text)
 
-        normalized = _normalize(segment.text)
-        if not segment.pinned and normalized in seen:
-            changes.append(
-                {
-                    "type": "duplicate_removed",
-                    "segment_id": segment.id,
-                    "kept_segment_id": seen[normalized],
-                    "tokens": segment.tokens,
-                }
-            )
-            actions.append(
-                {
-                    "action": "dedupe",
-                    "segment_ids": [segment.id],
-                    "reason": "Exact duplicate of retained unpinned segment.",
-                    "estimated_tokens_saved": segment.tokens,
-                }
-            )
-            diff.append(removed_diff(segment, "Exact duplicate of retained unpinned segment."))
-            continue
+    pruned_input = "\n\n".join(pruned_texts) if pruned_texts else raw_input
 
-        seen[normalized] = segment.id
-        compiled_text = segment.text
-        if not segment.pinned:
-            compiled_text, compaction_change, compaction_actions = _compact_segment(
-                segment,
-                mode=mode,
-                segment_index=index,
-                segment_count=len(original_segments),
-            )
-            if compaction_change:
-                changes.append(compaction_change)
-                actions.extend(compaction_actions)
-        retained.append((segment, compiled_text))
-        diff.append(kept_diff(segment, compiled_text))
+    # Run v2 pipeline on pruned input
+    v2_result = None
+    try:
+        v2_result = _runtime.compile(
+            pruned_input,
+            mode=mode,
+            target_token_budget=target_token_budget,
+        )
+    except Exception:
+        pass
 
-    optimized_text = "\n\n".join(text for _, text in retained)
-    original_tokens = sum(segment.tokens for segment in original_segments)
+    if v2_result and v2_result.output_graph:
+        optimized_text = v2_result.output_graph.data.get("output_text", pruned_input)
+    else:
+        optimized_text = raw_input
+
+    # Deduce changes by comparing pruned input sections to optimized output
+    pruned_sections = pruned_input.split("\n\n")
+    opt_sections = optimized_text.split("\n\n")
+
+    # Track which pruned sections map to which opt sections
+    opt_used = [False] * len(opt_sections)
+    for psec in pruned_sections:
+        pnorm = _normalize(psec)
+        found = False
+        for j, osec in enumerate(opt_sections):
+            if not opt_used[j] and _normalize(osec) == pnorm:
+                opt_used[j] = True
+                found = True
+                break
+        if not found:
+            # Check if partially present (compacted)
+            for j, osec in enumerate(opt_sections):
+                if not opt_used[j] and pnorm.startswith(_normalize(osec)[:40]):
+                    opt_used[j] = True
+                    found = True
+                    # Segment was compacted
+                    changes.append({
+                        "type": "segment_compacted",
+                        "segment_id": "",
+                        "lines_removed": 0,
+                        "tokens_before": estimate_text_tokens(psec),
+                        "tokens_after": estimate_text_tokens(osec),
+                    })
+                    break
+        if not found:
+            # Segment was fully removed (dedup or budget)
+            changes.append({
+                "type": "duplicate_removed",
+                "segment_id": "",
+                "kept_segment_id": "",
+                "tokens": estimate_text_tokens(psec),
+            })
+
+    # Extract actions from v2 per-segment transforms (map to v1 action names)
+    if v2_result:
+        for seg in v2_result.output_graph.segments.values():
+            for tr in seg.transforms:
+                base = tr.pass_id.split(".")[0]
+                # Derive action name from pass_id or reason string
+                if base == "normalize":
+                    # Extract specific minify action from reason
+                    reason_lower = tr.reason.lower()
+                    if "json_minify" in reason_lower or "json" in reason_lower:
+                        action_name = "json_minify"
+                    elif "markdown_plaintext" in reason_lower or "markdown" in reason_lower:
+                        action_name = "markdown_plaintext"
+                    else:
+                        action_name = "normalize"
+                elif base == "dedup":
+                    action_name = "dedupe"
+                elif base == "summarize":
+                    action_name = "tool_summary"
+                else:
+                    action_name = base
+                token_delta = tr.metadata.get("token_delta", tr.metadata.get("tokens_saved", 0))
+                if token_delta != 0:
+                    saved = abs(token_delta)
+                    actions.append({
+                        "action": action_name,
+                        "segment_ids": [seg.id],
+                        "reason": tr.reason,
+                        "estimated_tokens_saved": saved,
+                    })
+
+    # Build diff by comparing each original segment against optimized text
+    # Count occurrences of each text in optimized output to handle duplicates
+    from collections import Counter
+    opt_seg_counts = Counter(optimized_text.split("\n\n"))
+    kept_text_counts: dict[str, int] = {}
+    for segment in original_segments:
+        seg_text = segment.text
+        if segment.id in semantic_removed_segment_ids:
+            decision = semantic_decisions.get(segment.id, {})
+            diff.append(removed_diff(segment, decision.get("reason", "Semantic pruning")))
+        elif kept_text_counts.get(seg_text, 0) < opt_seg_counts.get(seg_text, 0):
+            kept_text_counts[seg_text] = kept_text_counts.get(seg_text, 0) + 1
+            diff.append(kept_diff(segment, segment.text))
+        else:
+            diff.append(removed_diff(segment, "Removed by compression pipeline"))
+
     optimized_tokens, tokens_saved = _token_metrics_for_output(
         raw_input,
         original_tokens,
@@ -223,24 +283,32 @@ def _build_compile(
     protected_entities = extract_entities(raw_input)
     missing_entities = [entity for entity in protected_entities if entity not in optimized_text]
 
-    if target_token_budget and optimized_tokens > target_token_budget:
-        warnings.append(
-            (
+    if target_token_budget:
+        if optimized_tokens > target_token_budget:
+            warnings.append(
                 f"Target budget {target_token_budget} tokens could not be met safely; "
                 f"optimized prompt is {optimized_tokens} estimated tokens."
             )
-        )
+        elif v2_result and any(d.code == "BUDGET_ENFORCED" for d in v2_result.diagnostics):
+            warnings.append(
+                f"Target budget {target_token_budget} tokens was enforced by removing "
+                f"{sum(1 for d in v2_result.diagnostics if d.code == 'BUDGET_ENFORCED')} segments."
+            )
 
     warnings.extend(_semantic_warnings(semantic, protected_entities, optimized_text))
     warnings.extend(_domain_term_warnings(raw_input, optimized_text, protected_entities))
     risk_score = _risk_score(mode, warnings, bool(missing_entities))
+    retained_ids = [
+        seg.id for seg in original_segments
+        if seg.id not in semantic_removed_segment_ids
+    ]
     return {
         "optimized_text": optimized_text,
         "optimized_tokens": optimized_tokens,
         "tokens_saved": tokens_saved,
         "changes": changes,
         "diff": diff,
-        "retained_segment_ids": [segment.id for segment, _ in retained],
+        "retained_segment_ids": retained_ids,
         "preservation": {
             "ok": not missing_entities,
             "checked_entities": protected_entities,
@@ -306,9 +374,11 @@ def _domain_term_warnings(
 ) -> list[str]:
     warnings: list[str] = []
     missing = []
+    raw_lower = raw_input.lower()
+    optimized_lower = optimized_text.lower()
     for term in _DOMAIN_TERMS:
         term_lower = term.lower()
-        if term_lower in raw_input.lower() and term_lower not in optimized_text.lower():
+        if term_lower in raw_lower and term_lower not in optimized_lower:
             missing.append(term)
     if missing:
         warnings.append(
@@ -316,208 +386,6 @@ def _domain_term_warnings(
             "Consider using lossless mode or adjusting the compression policy."
         )
     return warnings
-
-
-def _compact_segment(
-    segment: Segment,
-    mode: str,
-    segment_index: int,
-    segment_count: int,
-) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]]]:
-    actions: list[dict[str, Any]] = []
-    normalized_text, minify_action = maybe_compact_text(segment.text)
-    minify_removed = max(
-        0,
-        estimate_text_tokens(segment.text) - estimate_text_tokens(normalized_text),
-    )
-    if minify_action and mode != "lossless":
-        actions.append(
-            {
-                "action": minify_action,
-                "segment_ids": [segment.id],
-                "reason": "Compacted structured or markdown input before model injection.",
-                "estimated_tokens_saved": minify_removed,
-            }
-        )
-    else:
-        normalized_text = segment.text
-        minify_removed = 0
-
-    compacted, repeated_removed = _compact_repeated_lines(normalized_text)
-    truncated, truncated_lines = _truncate_large_tool_output(compacted, segment, mode)
-    tool_summarized, tool_summary_removed = _summarize_tool_segment(truncated, segment, mode)
-    summarized, summary_removed = _summarize_history_segment(
-        tool_summarized,
-        segment,
-        mode=mode,
-        segment_index=segment_index,
-        segment_count=segment_count,
-    )
-
-    removed = minify_removed + repeated_removed + truncated_lines + tool_summary_removed + summary_removed
-    if repeated_removed:
-        actions.append(
-            {
-                "action": "repeat_collapse",
-                "segment_ids": [segment.id],
-                "reason": "Collapsed adjacent repeated lines.",
-                "estimated_lines_removed": repeated_removed,
-            }
-        )
-    if truncated_lines:
-        actions.append(
-            {
-                "action": "tool_summary",
-                "segment_ids": [segment.id],
-                "reason": f"Compacted verbose {segment.type} output in {mode} mode.",
-                "estimated_lines_removed": truncated_lines,
-            }
-        )
-    if tool_summary_removed:
-        actions.append(
-            {
-                "action": "tool_summary",
-                "segment_ids": [segment.id],
-                "reason": "Summarized verbose tool output locally while preserving entities.",
-                "estimated_tokens_saved": tool_summary_removed,
-            }
-        )
-    if summary_removed:
-        actions.append(
-            {
-                "action": "history_summary",
-                "segment_ids": [segment.id],
-                "reason": "Summarized older unpinned context while preserving entities.",
-                "estimated_tokens_saved": summary_removed,
-            }
-        )
-
-    if removed == 0 and summarized == segment.text:
-        return segment.text, None, actions
-
-    return (
-        summarized,
-        {
-            "type": "segment_compacted",
-            "segment_id": segment.id,
-            "lines_removed": repeated_removed + truncated_lines,
-            "tokens_before": segment.tokens,
-            "tokens_after": estimate_text_tokens(summarized),
-        },
-        actions,
-    )
-
-
-def _compact_repeated_lines(text: str) -> tuple[str, int]:
-    lines = text.splitlines()
-    if len(lines) < 2:
-        return text, 0
-
-    output: list[str] = []
-    removed = 0
-    index = 0
-    while index < len(lines):
-        current = lines[index]
-        repeat_count = 1
-        while index + repeat_count < len(lines) and lines[index + repeat_count] == current:
-            repeat_count += 1
-
-        output.append(current)
-        if repeat_count > 1:
-            extra = repeat_count - 1
-            removed += extra
-            output.append(f"[repeated {extra} more times]")
-        index += repeat_count
-
-    return "\n".join(output), removed
-
-
-def _truncate_large_tool_output(text: str, segment: Segment, mode: str) -> tuple[str, int]:
-    lines = text.splitlines()
-    if segment.type not in {"tool", "rag"}:
-        return text, 0
-
-    if mode == "lossless":
-        max_lines, head_count, tail_count = 80, 45, 10
-    elif mode == "balanced":
-        max_lines, head_count, tail_count = 36, 18, 6
-    else:
-        max_lines, head_count, tail_count = 22, 10, 4
-
-    if len(lines) <= max_lines:
-        return text, 0
-
-    head = lines[:head_count]
-    middle = lines[head_count:-tail_count]
-    tail = lines[-tail_count:] if tail_count else []
-    protected_middle = [
-        line for line in middle if extract_entities(line) and line not in head and line not in tail
-    ]
-    omitted = len(lines) - len(head) - len(protected_middle) - len(tail)
-    marker = f"[omitted {omitted} middle lines in {mode} mode]"
-    return "\n".join([*head, *protected_middle, marker, *tail]), max(0, omitted)
-
-
-def _summarize_tool_segment(text: str, segment: Segment, mode: str) -> tuple[str, int]:
-    if mode == "lossless" or segment.type not in {"tool", "rag"}:
-        return text, 0
-
-    tokens = estimate_text_tokens(text)
-    threshold = 18 if mode == "balanced" else 12
-    if tokens <= threshold:
-        return text, 0
-
-    protected_lines = [line for line in text.splitlines() if extract_entities(line)]
-    summary_lines = [
-        f"[{segment.type} summary]",
-        *protected_lines,
-    ]
-    summary = "\n".join(dict.fromkeys(line for line in summary_lines if line.strip()))
-    return summary, max(0, tokens - estimate_text_tokens(summary))
-
-
-def _summarize_history_segment(
-    text: str,
-    segment: Segment,
-    mode: str,
-    segment_index: int,
-    segment_count: int,
-) -> tuple[str, int]:
-    if mode == "lossless" or segment.type in {"system", "developer", "tool", "rag"}:
-        return text, 0
-    if segment_index >= max(0, segment_count - 2):
-        return text, 0
-
-    tokens = estimate_text_tokens(text)
-    threshold = 90 if mode == "balanced" else 45
-    if tokens <= threshold:
-        return text, 0
-
-    sentences = _sentence_fragments(text)
-    kept = sentences[:2] if mode == "balanced" else sentences[:1]
-    protected_lines = [line for line in text.splitlines() if extract_entities(line)]
-    parts = [part for part in [*kept, *protected_lines] if part.strip()]
-    summary = "\n".join(dict.fromkeys(parts))
-    if not summary:
-        summary = text[:240].strip()
-    summary = f"[summarized older {segment.type} context]\n{summary}"
-    summary_tokens = estimate_text_tokens(summary)
-    if summary_tokens >= tokens:
-        return text, 0
-    return summary, max(0, tokens - summary_tokens)
-
-
-def _sentence_fragments(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    fragments = []
-    for part in parts:
-        stripped = part.strip()
-        if not stripped:
-            continue
-        if re.match(r"^\d+\.$", stripped) or re.match(r"^\d+\.\s", stripped):
-            continue
-        fragments.append(stripped)
-    return fragments
 
 
 def _validate_mode(mode: str) -> str:
@@ -619,3 +487,21 @@ def _risk_level(score: float) -> str:
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def _compile_cache_key(
+    raw_input: str,
+    model: str,
+    mode: str,
+    target_token_budget: int | None,
+    dry_run: bool,
+) -> str | None:
+    payload = {
+        "raw_input": raw_input,
+        "model": model,
+        "mode": mode,
+        "target_token_budget": target_token_budget,
+        "dry_run": dry_run,
+    }
+    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:32]

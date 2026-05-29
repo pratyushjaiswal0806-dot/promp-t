@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 
 
@@ -28,6 +29,7 @@ _ENTITY_PATTERNS = [
 ]
 
 
+@lru_cache(maxsize=256)
 def extract_entities(text: str) -> list[str]:
     """Return protected entities in first-seen order."""
 

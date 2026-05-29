@@ -6,7 +6,7 @@ import re
 
 from promptcompiler.entities import extract_entities as _extract_entities
 from promptcompiler.ir import ContextGraph
-from promptcompiler.ir.entity import Entity
+from promptcompiler.ir.types import Entity
 from promptcompiler.ir.segment import TransformRecord
 from promptcompiler.passes import Diagnostic, PassContext, PassRegistry
 

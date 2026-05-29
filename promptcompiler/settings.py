@@ -76,15 +76,6 @@ class SecuritySettings(BaseSettings):
     retention_days: int = 90
 
 
-class PluginSettings(BaseSettings):
-    """Plugin discovery configuration."""
-
-    model_config = SettingsConfigDict(env_prefix="PROMPTCOMPILER_")
-
-    extra_plugin_paths: list[str] = []
-    disable_entry_point_discovery: bool = False
-
-
 class PromptCompilerSettings(BaseSettings):
     """Root settings aggregating all sub-settings."""
 
@@ -93,7 +84,6 @@ class PromptCompilerSettings(BaseSettings):
     storage: StorageSettings = StorageSettings()
     compiler: CompilerSettings = CompilerSettings()
     security: SecuritySettings = SecuritySettings()
-    plugins: PluginSettings = PluginSettings()
     disable_dotenv: bool = False
     debug: bool = False
 

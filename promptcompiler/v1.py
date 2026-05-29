@@ -140,6 +140,7 @@ def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
         target_token_budget=request.target_token_budget,
         dry_run=request.dry_run,
         semantic_policy=request.semantic_policy,
+        use_cache=bool(cache_key),
     )
     before_cost = _estimated_cost(result["original_tokens"])
     after_cost = _estimated_cost(result["optimized_tokens"])

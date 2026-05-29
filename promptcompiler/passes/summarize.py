@@ -60,6 +60,28 @@ def _truncate_tool_output(text: str, mode_int: int) -> tuple[str, int]:
     return "\n".join([*head, *protected, marker, *tail]), max(0, omitted)
 
 
+def _summarize_tool_output(text: str, mode_int: int, role: ContextRole) -> tuple[str, int]:
+    """Summarise verbose tool/rag output into a compact block preserving entities."""
+    if mode_int == 0:
+        return text, 0
+
+    tokens = estimate_segment_tokens(text)
+    threshold = 18 if mode_int == 1 else 12
+    if tokens <= threshold:
+        return text, 0
+
+    if not any(_has_entity(line) for line in text.splitlines()):
+        return text, 0
+
+    protected_lines = [line for line in text.splitlines() if _has_entity(line)]
+    summary_lines = [
+        "[tool summary]",
+        *protected_lines,
+    ]
+    summary = "\n".join(OrderedDict.fromkeys(line for line in summary_lines if line.strip()))
+    return summary, max(0, tokens - estimate_segment_tokens(summary))
+
+
 def _summarize_long(text: str, role: ContextRole, segment_type: SegmentType, mode_int: int, index: int, total: int) -> tuple[str, int]:
     """Summarise older user/assistant context beyond the threshold."""
 
@@ -118,13 +140,23 @@ class SummarizePass:
             if r_removed:
                 actions_taken.append(f"repeat_collapse({r_removed})")
 
-            # 2) Tool output truncation
-            if seg.context_role == ContextRole.TOOL_OUTPUT or seg.segment_type in (SegmentType.TEXT,):
+            # 2) Tool output truncation — long text segments treated as tool output
+            is_tool_like = (
+                seg.context_role == ContextRole.TOOL_OUTPUT
+                or len(seg.text.splitlines()) > 20
+            )
+            if is_tool_like:
                 text, t_removed = _truncate_tool_output(text, mode_int)
                 if t_removed:
                     actions_taken.append(f"tool_truncate({t_removed})")
 
-            # 3) History summarization
+            # 3) Tool summarization — compact verbose output
+            if is_tool_like:
+                text, s_removed = _summarize_tool_output(text, mode_int, seg.context_role)
+                if s_removed:
+                    actions_taken.append(f"tool_summary({s_removed})")
+
+            # 4) History summarization
             text, h_removed = _summarize_long(text, seg.context_role, seg.segment_type, mode_int, idx, total)
             if h_removed:
                 actions_taken.append(f"summarize({h_removed})")
