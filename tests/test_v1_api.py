@@ -220,6 +220,25 @@ class V1ApiTests(unittest.TestCase):
         self.assertEqual(trace["trace_id"], compile_payload["trace_id"])
         self.assertFalse(trace["retention"]["raw_payload_stored"])
 
+    def test_v1_compile_dry_run_bypasses_cache_and_returns_proposed_prompt(self):
+        status, response = post_v1(
+            "/v1/compile",
+            {
+                "provider": "openai",
+                "model": "gpt-4o-mini",
+                "input": "repeat\n\nrepeat",
+                "mode": "balanced",
+                "dry_run": True,
+                "cache_policy": {"enabled": True},
+            },
+        )
+
+        payload = json.loads(response)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["cache"]["status"], "bypass")
+        self.assertEqual(payload["optimized_prompt"], "repeat\n\nrepeat")
+        self.assertEqual(payload["compile"]["proposed_optimized_text"], "repeat")
+
     def test_v1_session_append_triggers_compaction_and_metrics(self):
         responses = []
         for index in range(4):
@@ -271,6 +290,44 @@ class V1ApiTests(unittest.TestCase):
         self.assertEqual(payload["output_policy"]["max_words"], 50)
         self.assertIn("Return JSON only", payload["optimized_prompt"])
         self.assertIn("Answer in <=50 words", payload["optimized_prompt"])
+
+    def test_v1_compile_accepts_full_frontend_optimization_payload(self):
+        status, response = post_v1(
+            "/v1/compile",
+            {
+                "input": (
+                    "Task: answer the support agent.\n\n"
+                    "Source: policy-a\nRefunds over 500 require manager approval.\n\n"
+                    "Source: policy-b\nRefunds over 500 require manager approval."
+                ),
+                "model": "gpt-4o-mini",
+                "mode": "balanced",
+                "target_token_budget": 180,
+                "dry_run": True,
+                "zero_retention": True,
+                "context_policy": {
+                    "system_prompt_ref": "json_only",
+                    "cache_static_prefix": True,
+                    "retrieval_top_k": 3,
+                },
+                "output_policy": {"format": "json", "max_words": 80, "explain": False},
+                "tool_policy": {"compact": True, "max_tools": 2},
+                "cache_policy": {"enabled": True},
+                "semantic_policy": {"scorer": "embedding", "provider": "deterministic"},
+            },
+        )
+
+        payload = json.loads(response)
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["dry_run"])
+        self.assertTrue(payload["retention"]["zero_retention"])
+        self.assertEqual(payload["context_policy"]["retrieval_top_k"], 3)
+        self.assertEqual(payload["output_policy"]["format"], "json")
+        self.assertTrue(payload["tool_policy"]["compact"])
+        self.assertTrue(payload["cache_policy"]["enabled"])
+        self.assertEqual(payload["semantic_policy"]["scorer"], "embedding")
+        self.assertEqual(payload["cache"]["status"], "bypass")
+        self.assertIn("proposed_optimized_text", payload["compile"])
 
     def test_v1_session_context_returns_compact_messages(self):
         for index in range(3):

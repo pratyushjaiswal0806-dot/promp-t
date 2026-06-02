@@ -64,7 +64,7 @@ class FingerprintStore:
             conn.close()
         if row is None:
             return None
-        fp: int = row[0]
+        fp = int(row[0])
         weights: list[int] = json.loads(row[1])
         return fp, weights
 
@@ -74,7 +74,7 @@ class FingerprintStore:
             conn.execute(
                 "INSERT OR REPLACE INTO fingerprint_cache (cache_key, fingerprint, weights_json, created_at) "
                 "VALUES (?, ?, ?, ?)",
-                (cache_key, fingerprint,
+                (cache_key, str(fingerprint),
                  json.dumps(weights, separators=(",", ":")),
                  datetime.now(timezone.utc).isoformat()),
             )
@@ -92,13 +92,18 @@ class FingerprintStore:
             "SELECT name FROM sqlite_master WHERE type='table' AND name='fingerprint_cache'"
         ).fetchone()
         if has_table:
-            cols = {row[1] for row in conn.execute("PRAGMA table_info(fingerprint_cache)")}
-            if "weights_json" not in cols:
+            table_info = list(conn.execute("PRAGMA table_info(fingerprint_cache)"))
+            cols = {row[1] for row in table_info}
+            fingerprint_type = next(
+                (str(row[2]).upper() for row in table_info if row[1] == "fingerprint"),
+                "",
+            )
+            if "weights_json" not in cols or fingerprint_type != "TEXT":
                 conn.execute("DROP TABLE fingerprint_cache")
                 conn.execute(
                     "CREATE TABLE fingerprint_cache ("
                     "  cache_key TEXT PRIMARY KEY,"
-                    "  fingerprint INTEGER NOT NULL,"
+                    "  fingerprint TEXT NOT NULL,"
                     "  weights_json TEXT NOT NULL DEFAULT '[]',"
                     "  created_at TEXT NOT NULL"
                     ")"
@@ -108,7 +113,7 @@ class FingerprintStore:
             conn.execute(
                 "CREATE TABLE fingerprint_cache ("
                 "  cache_key TEXT PRIMARY KEY,"
-                "  fingerprint INTEGER NOT NULL,"
+                "  fingerprint TEXT NOT NULL,"
                 "  weights_json TEXT NOT NULL DEFAULT '[]',"
                 "  created_at TEXT NOT NULL"
                 ")"

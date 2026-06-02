@@ -6,7 +6,7 @@ export function AnalyticsPanel() {
   return (
     <>
       {metrics.length > 0 && (
-        <div className="metrics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.5rem", padding: 0 }}>
+        <div id="metrics" className="metrics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.5rem", padding: 0 }}>
           {metrics.map(([label, value]) => (
             <div key={label} className="metric-item" style={{ padding: "0.5rem" }}>
               <span className="metric-label">{label}</span>
@@ -15,7 +15,7 @@ export function AnalyticsPanel() {
           ))}
         </div>
       )}
-      {breakdown.length > 0 && <StackList title="Breakdown" items={breakdown} emptyMessage="" />}
+      {breakdown.length > 0 && <div id="breakdown"><StackList title="Breakdown" items={breakdown} emptyMessage="" /></div>}
       {metrics.length === 0 && breakdown.length === 0 && <div className="empty-state">Run analyze or compile to see metrics.</div>}
     </>
   );

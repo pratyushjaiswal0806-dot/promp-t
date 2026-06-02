@@ -190,6 +190,26 @@ def _build_compile(
     else:
         optimized_text = raw_input
 
+    diagnostic_guard = _aggressive_diagnostic_guard(raw_input, optimized_text, mode)
+    optimized_text = diagnostic_guard["optimized_text"]
+    if diagnostic_guard["detected"]:
+        warning = (
+            "Aggressive mode detected diagnostic context; review preserved log/error "
+            "details before using this compressed handoff."
+        )
+        if diagnostic_guard["restored"]:
+            warning = (
+                "Aggressive mode restored diagnostic context that would otherwise be "
+                "removed; review preserved log/error details before using this compressed handoff."
+            )
+            actions.append({
+                "action": "diagnostic_context_restore",
+                "segment_ids": [],
+                "reason": "Kept representative error/handoff lines in aggressive mode.",
+                "estimated_tokens_saved": None,
+            })
+        warnings.append(warning)
+
     # Deduce changes by comparing pruned input sections to optimized output
     pruned_sections = pruned_input.split("\n\n")
     opt_sections = optimized_text.split("\n\n")
@@ -386,6 +406,71 @@ def _domain_term_warnings(
             "Consider using lossless mode or adjusting the compression policy."
         )
     return warnings
+
+
+_DIAGNOSTIC_DETAIL_PATTERN = re.compile(
+    r"\b(?:error|failed|failure|exception|traceback|stack|timeout|notarization|"
+    r"signing|stderr|exit\s+code|http\s+[45]\d\d)\b",
+    re.IGNORECASE,
+)
+_DIAGNOSTIC_HANDOFF_PATTERN = re.compile(
+    r"\b(?:incident|handoff|next engineer|tool log|debug|diagnostic|retry)\b",
+    re.IGNORECASE,
+)
+
+
+def _aggressive_diagnostic_guard(
+    raw_input: str,
+    optimized_text: str,
+    mode: str,
+) -> dict[str, Any]:
+    if mode != "aggressive":
+        return {"optimized_text": optimized_text, "detected": False, "restored": False}
+
+    diagnostic_lines = _diagnostic_lines(raw_input)
+    if not diagnostic_lines:
+        return {"optimized_text": optimized_text, "detected": False, "restored": False}
+
+    if _diagnostic_lines_survived(optimized_text, diagnostic_lines):
+        return {"optimized_text": optimized_text, "detected": True, "restored": False}
+
+    restored = "\n".join(diagnostic_lines[:4])
+    next_text = f"{optimized_text.rstrip()}\n\n[diagnostic context kept]\n{restored}".strip()
+    return {"optimized_text": next_text, "detected": True, "restored": True}
+
+
+def _diagnostic_lines(raw_input: str) -> list[str]:
+    detail_lines: list[str] = []
+    handoff_lines: list[str] = []
+    for raw_line in raw_input.splitlines():
+        line = raw_line.strip()
+        if not line or line.lower().startswith("@pin"):
+            continue
+        if _DIAGNOSTIC_DETAIL_PATTERN.search(line):
+            detail_lines.append(line)
+        elif _DIAGNOSTIC_HANDOFF_PATTERN.search(line):
+            handoff_lines.append(line)
+
+    return _unique_preserving_order([*detail_lines[:3], *handoff_lines[:2]])
+
+
+def _diagnostic_lines_survived(optimized_text: str, diagnostic_lines: list[str]) -> bool:
+    normalized_output = _normalize(optimized_text)
+    detail_lines = [line for line in diagnostic_lines if _DIAGNOSTIC_DETAIL_PATTERN.search(line)]
+    required_lines = detail_lines or diagnostic_lines
+    return any(_normalize(line) in normalized_output for line in required_lines)
+
+
+def _unique_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        key = _normalize(value)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(value)
+    return unique
 
 
 def _validate_mode(mode: str) -> str:

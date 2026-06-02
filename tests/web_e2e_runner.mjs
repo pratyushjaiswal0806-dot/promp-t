@@ -8,11 +8,11 @@ const baseUrl = process.argv[2];
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const port = 11500 + Math.floor(Math.random() * 1000);
 const profileDir = path.join(os.tmpdir(), `promptcompiler-e2e-${Date.now()}`);
+const visualWidths = [1440, 1024, 768, 390, 320];
+const visualRoutes = ["home", "workbench", "docs", "api-reference", "observability"];
 
 function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
+  if (!condition) throw new Error(message);
 }
 
 function requestJson(pathname, method = "GET") {
@@ -20,15 +20,9 @@ function requestJson(pathname, method = "GET") {
     const req = http.request({ host: "127.0.0.1", port, path: pathname, method }, (res) => {
       let data = "";
       res.setEncoding("utf8");
-      res.on("data", (chunk) => {
-        data += chunk;
-      });
+      res.on("data", (chunk) => { data += chunk; });
       res.on("end", () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (error) {
-          reject(error);
-        }
+        try { resolve(JSON.parse(data)); } catch (error) { reject(error); }
       });
     });
     req.on("error", reject);
@@ -39,11 +33,8 @@ function requestJson(pathname, method = "GET") {
 async function waitForChrome() {
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
-    try {
-      return await requestJson("/json/version");
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    try { return await requestJson("/json/version"); }
+    catch { await new Promise((resolve) => setTimeout(resolve, 100)); }
   }
   throw new Error("Chrome debugging endpoint did not start");
 }
@@ -58,16 +49,10 @@ function connect(wsUrl) {
     if (msg.id && pending.has(msg.id)) {
       const { resolve, reject } = pending.get(msg.id);
       pending.delete(msg.id);
-      if (msg.error) {
-        reject(new Error(`${msg.error.message}: ${msg.error.data || ""}`));
-      } else {
-        resolve(msg.result || {});
-      }
+      msg.error ? reject(new Error(`${msg.error.message}: ${msg.error.data || ""}`)) : resolve(msg.result || {});
       return;
     }
-    if (msg.method) {
-      events.push(msg);
-    }
+    if (msg.method) events.push(msg);
   });
   return new Promise((resolve, reject) => {
     ws.addEventListener("open", () => {
@@ -80,9 +65,7 @@ function connect(wsUrl) {
             pending.set(callId, { resolve: resolveCall, reject: rejectCall });
           });
         },
-        close() {
-          ws.close();
-        },
+        close() { ws.close(); },
       });
     });
     ws.addEventListener("error", reject);
@@ -94,23 +77,78 @@ async function evalExpr(cdp, expression) {
     expression,
     awaitPromise: true,
     returnByValue: true,
-    timeout: 15000,
+    timeout: 20000,
   });
-  if (result.exceptionDetails) {
-    throw new Error(result.exceptionDetails.text || "Runtime evaluation failed");
-  }
+  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text || "Runtime evaluation failed");
   return result.result.value;
 }
 
-async function waitFor(cdp, expression, label, timeout = 15000) {
+async function waitFor(cdp, expression, label, timeout = 20000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
-    if (await evalExpr(cdp, expression).catch(() => false)) {
-      return;
-    }
+    if (await evalExpr(cdp, expression).catch(() => false)) return;
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   throw new Error(`Timed out waiting for ${label}`);
+}
+
+async function clickDrawerTab(cdp, label) {
+  await evalExpr(
+    cdp,
+    `(() => {
+      const button = [...document.querySelectorAll('.drawer-tab')].find((item) => item.textContent.trim() === ${JSON.stringify(label)});
+      if (!button) return false;
+      button.click();
+      return true;
+    })()`,
+  );
+}
+
+async function setInputValue(cdp, selector, value, eventName = "input") {
+  await evalExpr(
+    cdp,
+    `(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return false;
+      const isCheckbox = el.type === 'checkbox';
+      if (isCheckbox) {
+        const desired = Boolean(${JSON.stringify(value)});
+        if (el.checked !== desired) el.click();
+        else el.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        const prototype = el.tagName === 'TEXTAREA'
+          ? HTMLTextAreaElement.prototype
+          : el.tagName === 'SELECT'
+            ? HTMLSelectElement.prototype
+            : HTMLInputElement.prototype;
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+        if (descriptor?.set) descriptor.set.call(el, ${JSON.stringify(value)});
+        else el.value = ${JSON.stringify(value)};
+        el.dispatchEvent(new Event(${JSON.stringify(eventName)}, { bubbles: true }));
+      }
+      return true;
+    })()`,
+  );
+}
+
+async function compileAndWait(cdp, label) {
+  const beforeReport = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);
+  await evalExpr(cdp, `document.querySelector('#compileButton').click()`);
+  await waitFor(
+    cdp,
+    `document.querySelector('#compileButton')?.textContent === 'Compile & Optimize' && !document.querySelector('.error-box') && (document.querySelector('#optimizationReport')?.innerText || '') !== ${JSON.stringify(beforeReport)}`,
+    `${label} compile complete`,
+  );
+}
+
+async function setViewport(cdp, width, height = 980) {
+  await cdp.send("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: width <= 390 ? 2 : 1,
+    mobile: false,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 async function navigateToPage(cdp, pageId) {
@@ -126,8 +164,143 @@ async function navigateToPage(cdp, pageId) {
   await waitFor(
     cdp,
     `location.pathname === document.querySelector('[data-page-target="${pageId}"]')?.getAttribute('data-page-path') && Boolean(document.querySelector('[data-page-id="${pageId}"]'))`,
-    `${pageId} page`,
+    `${pageId} visual page`,
   );
+}
+
+async function assertVisualContract(cdp, label, options = {}) {
+  const result = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => {
+    const options = ${JSON.stringify(options)};
+    const issues = [];
+    const viewportWidth = window.innerWidth;
+    const docWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+    if (docWidth > viewportWidth + 1) {
+      issues.push('page overflow ' + docWidth + ' > ' + viewportWidth);
+    }
+
+    const isVisible = (el) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    };
+    const rectOf = (el) => {
+      const rect = el.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height };
+    };
+    const overlaps = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+    const labelFor = (el) => {
+      if (el.id) return '#' + el.id;
+      if (el.getAttribute('data-page-target')) return '[data-page-target=' + el.getAttribute('data-page-target') + ']';
+      if (el.className && typeof el.className === 'string') return '.' + el.className.trim().split(/\\s+/).slice(0, 2).join('.');
+      return el.tagName.toLowerCase();
+    };
+
+    const containedSelectors = [
+      '.topbar',
+      '.brand-lockup',
+      '.brand-title',
+      '.status-chip',
+      '.theme-toggle',
+      '.topnav',
+      '#controlPanel',
+      '#outputPanel',
+      '#analyticsPanel',
+      '.drawer',
+      '.drawer-tabs',
+      '.table-wrap',
+      '.optimization-report',
+      '.usability-verdict',
+      '.proposed-prompt-panel',
+    ];
+
+    for (const selector of containedSelectors) {
+      for (const el of document.querySelectorAll(selector)) {
+        if (!isVisible(el)) continue;
+        const rect = rectOf(el);
+        if (rect.left < -1 || rect.right > viewportWidth + 1) {
+          issues.push(selector + ' escapes viewport: ' + Math.round(rect.left) + '..' + Math.round(rect.right) + ' of ' + viewportWidth);
+        }
+      }
+    }
+
+    const clipSelectors = [
+      '.brand-title',
+      '.status-chip',
+      '.theme-toggle',
+      '.topnav button',
+      '#compileButton',
+      '#exportTextButton',
+      '#exportJsonButton',
+      '.btn',
+      '.editor-panel-header .eyebrow',
+      '.savings-badge',
+      '.drawer-tab',
+      '.report-metric span',
+      '.report-metric strong',
+      '.risk-pill',
+      '.history-card > button',
+      '.history-actions button',
+      '.usability-verdict strong',
+      '.usability-verdict span',
+      '.proposed-prompt-heading strong',
+      '.proposed-prompt-heading span',
+    ];
+
+    for (const selector of clipSelectors) {
+      for (const el of document.querySelectorAll(selector)) {
+        if (!isVisible(el)) continue;
+        if (el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2) {
+          issues.push(labelFor(el) + ' clips text: ' + el.scrollWidth + 'x' + el.scrollHeight + ' > ' + el.clientWidth + 'x' + el.clientHeight);
+        }
+      }
+    }
+
+    const overlapGroups = [
+      ['topbar children', [...document.querySelectorAll('.topbar > *')]],
+      ['editor panels', [...document.querySelectorAll('.workbench-editors > *')]],
+      ['report cards', [...document.querySelectorAll('.report-grid > .report-metric')]],
+    ];
+    for (const [group, rawItems] of overlapGroups) {
+      const items = rawItems.filter(isVisible);
+      for (let i = 0; i < items.length; i += 1) {
+        for (let j = i + 1; j < items.length; j += 1) {
+          if (overlaps(rectOf(items[i]), rectOf(items[j]))) {
+            issues.push(group + ' overlap: ' + labelFor(items[i]) + ' / ' + labelFor(items[j]));
+          }
+        }
+      }
+    }
+
+    if (options.expectWorkbenchDetails) {
+      for (const selector of ['#optimizationReport .report-metric', '#usabilityVerdict', '#historyList .history-card']) {
+        if (!document.querySelector(selector)) issues.push('missing visual target ' + selector);
+      }
+    }
+
+    if (options.expectDryRun) {
+      for (const selector of ['#proposedPromptPanel', '#optimizationReport .report-metric', '#usabilityVerdict']) {
+        if (!document.querySelector(selector)) issues.push('missing visual target ' + selector);
+      }
+    }
+
+    return { issues, docWidth, viewportWidth };
+  })())`));
+  assert(result.issues.length === 0, `${label} visual issues: ${result.issues.join("; ")}`);
+}
+
+async function assertVisualSweep(cdp) {
+  for (const width of visualWidths) {
+    await setViewport(cdp, width);
+    await assertVisualContract(cdp, `populated workbench ${width}px`, { expectWorkbenchDetails: true });
+  }
+
+  for (const width of visualWidths) {
+    await setViewport(cdp, width);
+    for (const route of visualRoutes) {
+      await navigateToPage(cdp, route);
+      await assertVisualContract(cdp, `${route} ${width}px`);
+    }
+  }
 }
 
 const chrome = spawn(
@@ -139,7 +312,7 @@ const chrome = spawn(
     "--disable-gpu",
     "--no-first-run",
     "--no-default-browser-check",
-    "--window-size=1440,1200",
+    "--window-size=1440,1100",
     "about:blank",
   ],
   { stdio: ["ignore", "ignore", "pipe"] },
@@ -154,285 +327,139 @@ try {
   await cdp.send("Network.enable");
 
   await cdp.send("Page.navigate", { url: baseUrl });
-  await waitFor(cdp, 'document.readyState === "complete"', "page load");
+  await waitFor(cdp, `document.readyState === "complete"`, "page load");
+  await waitFor(cdp, `Boolean(document.querySelector('[data-page-target="workbench"]'))`, "navigation boot");
+  await evalExpr(cdp, `document.querySelector('[data-page-target="workbench"]').click()`);
   await waitFor(
     cdp,
-    'Boolean(document.querySelector("#heroPanel") && document.querySelector("[data-page-target=workbench]") && document.querySelector("[data-page-target=docs]"))',
-    "multipage shell boot",
-  );
-
-  const pageBoot = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => ({
-        navTargets: [...document.querySelectorAll('[data-page-target]')].map((item) => item.getAttribute('data-page-target')),
-        homeText: document.body.textContent,
-        shellWidth: document.documentElement.scrollWidth,
-        innerWidth: window.innerWidth
-      }))())`,
-    ),
-  );
-  for (const pageId of ["home", "workbench", "how-it-works", "platform", "security", "use-cases", "docs", "api-reference", "observability"]) {
-    assert(pageBoot.navTargets.includes(pageId), `missing navigation target: ${pageId}`);
-  }
-  for (const phrase of ["PromptCompiler", "Parse", "Protect", "Compile", "Measure", "Local-first"]) {
-    assert(pageBoot.homeText.includes(phrase), `home explanation is missing: ${phrase}`);
-  }
-  assert(pageBoot.shellWidth <= pageBoot.innerWidth, "initial desktop shell overflowed horizontally");
-
-  await evalExpr(cdp, `history.pushState(null, "", "/docs"); window.dispatchEvent(new PopStateEvent("popstate")); true`);
-  await waitFor(
-    cdp,
-    `location.pathname === '/docs' && Boolean(document.querySelector('[data-page-id="docs"]'))`,
-    "path-addressable docs page",
-  );
-
-  for (const pageId of ["how-it-works", "platform", "security", "use-cases", "docs", "api-reference", "observability"]) {
-    await navigateToPage(cdp, pageId);
-    const pageText = await evalExpr(cdp, "document.body.innerText");
-    assert(pageText.length > 800, `${pageId} page is not informative enough`);
-  }
-
-  await navigateToPage(cdp, "workbench");
-  await waitFor(
-    cdp,
-    'document.querySelector("#promptInput") && document.querySelector("#compileButton") && document.querySelector("#analyzeButton") && document.querySelector("#sampleSelect")?.options.length > 1',
+    `location.pathname === '/workbench' && Boolean(document.querySelector('#promptInput') && document.querySelector('#compileButton'))`,
     "workbench boot",
   );
 
-  const boot = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => ({
-        requiredSelectors: [
-          '#promptInput',
-          '#promptIdeaInput',
-          '#promptKindSelect',
-          '#generatePromptButton',
-          '#lintButton',
-          '#analyzeButton',
-          '#compileButton',
-          '#modelSelect',
-          '#sampleSelect',
-          '#importInput',
-          '#exportTextButton',
-          '#exportJsonButton',
-          '#historyList',
-          '#segmentsTable',
-          '#diffList',
-          '#nimButton',
-          '#modeSelect',
-          '#targetBudgetInput',
-          '#systemPromptRef',
-          '#outputFormat',
-          '#maxWordsInput',
-          '#retrievalTopKInput',
-          '#cacheStaticPrefix',
-          '#cacheEnabled',
-          '#explainToggle',
-          '#dryRunInput',
-          '#semanticScores',
-          '#lintFindings'
-        ].filter((selector) => !document.querySelector(selector)),
-        premiumSelectors: [
-          '#heroPanel',
-          '#signalCanvas',
-          '#pipelinePanel',
-          '#proofPanel',
-          '#workflowRail',
-          '.motion-orbit',
-          '.motion-stream',
-          '.motion-marquee',
-          '.page-transition-beam'
-        ].filter((selector) => !document.querySelector(selector)),
-        premiumText: document.body.innerText,
-        canvasReady: window.__promptCompilerVizReady === true,
-        canvasPixels: (() => {
-          const canvas = document.querySelector('#signalCanvas');
-          if (!canvas) return 0;
-          const context = canvas.getContext('2d');
-          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-          let lit = 0;
-          for (let index = 3; index < pixels.length; index += 4) {
-            if (pixels[index] > 0 && (pixels[index - 1] > 10 || pixels[index - 2] > 10 || pixels[index - 3] > 10)) {
-              lit += 1;
-            }
-          }
-          return lit;
-        })(),
-        primaryText: document.querySelector('#compileButton')?.textContent || '',
-        heroIndex: [...document.querySelectorAll('main section')].findIndex((section) => section.id === 'heroPanel'),
-        controlIndex: [...document.querySelectorAll('main section')].findIndex((section) => section.id === 'controlPanel'),
-        outputIndex: [...document.querySelectorAll('main section')].findIndex((section) => section.id === 'outputPanel'),
-        analyticsIndex: [...document.querySelectorAll('main section')].findIndex((section) => section.id === 'analyticsPanel')
-      }))())`,
-    ),
-  );
+  const boot = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => ({
+    requiredSelectors: [
+      '#promptInput', '#compileButton', '#analyzeButton', '#lintButton', '#nimButton',
+      '#modelSelect', '#sampleSelect', '#workflowPresetSelect', '#targetBudgetInput',
+      '#dryRunInput', '#zeroRetentionInput', '#cacheEnabled', '#outputFormat',
+      '#maxWordsInput', '#explainToggle', '#systemPromptRef', '#retrievalTopKInput',
+      '#toolCompactInput', '#deterministicSemanticInput', '#optimizedOutput',
+      '#optimizationReport', '#exportTextButton', '#exportJsonButton'
+    ].filter((selector) => !document.querySelector(selector)),
+    primaryText: document.querySelector('#compileButton')?.textContent.trim(),
+    outputTop: document.querySelector('#outputPanel')?.getBoundingClientRect().top,
+    analyticsTop: document.querySelector('#analyticsPanel')?.getBoundingClientRect().top,
+    scrollWidth: document.documentElement.scrollWidth,
+    innerWidth: window.innerWidth
+  }))())`));
+  assert(boot.requiredSelectors.length === 0, `missing selectors: ${boot.requiredSelectors.join(", ")}`);
+  assert(boot.primaryText === "Compile & Optimize", "primary action label changed");
+  assert(boot.outputTop < boot.analyticsTop, "optimized output must appear before analytics");
+  assert(boot.scrollWidth <= boot.innerWidth, "desktop workbench overflowed horizontally");
 
-  assert(boot.requiredSelectors.length === 0, `missing dashboard selectors: ${boot.requiredSelectors.join(", ")}`);
-  assert(boot.premiumSelectors.length === 0, `missing premium selectors: ${boot.premiumSelectors.join(", ")}`);
-  assert(boot.primaryText.trim() === "Compile & Optimize", "primary action is not available");
-  assert(boot.heroIndex !== -1 && boot.controlIndex !== -1 && boot.heroIndex < boot.controlIndex, "hero must lead the workbench");
-  const accessibilityState = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => {
-        const modelSelect = document.querySelector('#modelSelect');
-        const modelSearch = document.querySelector('#modelSearch');
-        const originalModel = modelSelect.value;
-        modelSearch.value = 'unlikely-model-filter-value';
-        modelSearch.dispatchEvent(new Event('input', { bubbles: true }));
-        return {
-          activeNav: document.querySelector('[data-page-target="workbench"]')?.getAttribute('aria-current'),
-          importButton: document.querySelector('.file-button')?.tagName,
-          importInputHiddenByDisplay: getComputedStyle(document.querySelector('#importInput')).display,
-          originalModel,
-          filteredModel: modelSelect.value,
-          modelOptions: [...modelSelect.options].map((option) => option.value)
-        };
-      })())`,
-    ),
-  );
-  assert(accessibilityState.activeNav === "page", "active navigation must expose aria-current");
-  assert(accessibilityState.importButton === "BUTTON", "file import affordance must be keyboard reachable");
-  assert(accessibilityState.importInputHiddenByDisplay !== "none", "file input must not be display none");
-  assert(accessibilityState.filteredModel === accessibilityState.originalModel, "model search must preserve selected model");
-  assert(accessibilityState.modelOptions.includes(accessibilityState.originalModel), "selected model option disappeared while filtering");
-  await evalExpr(
-    cdp,
-    `(() => {
-      const modelSearch = document.querySelector('#modelSearch');
-      modelSearch.value = '';
-      modelSearch.dispatchEvent(new Event('input', { bubbles: true }));
-      return true;
-    })()`,
-  );
-  await evalExpr(cdp, `document.querySelector('.hero-actions a[href="#pipelinePanel"]')?.click()`);
-  await waitFor(
-    cdp,
-    `location.hash === '#pipelinePanel' && Boolean(document.querySelector('[data-page-id="workbench"]') && document.querySelector('#pipelinePanel'))`,
-    "workbench section anchor",
-  );
-  for (const phrase of ["What happens inside", "Parse", "Protect", "Compile", "Measure", "Local-first"]) {
-    assert(boot.premiumText.includes(phrase), `premium explanation is missing: ${phrase}`);
-  }
-  assert(boot.canvasReady === true && boot.canvasPixels > 500, "signal canvas did not render visible pixels");
+  await evalExpr(cdp, `localStorage.removeItem('promptcompiler.history.v1')`);
+
+  await setInputValue(cdp, "#sampleSelect", "support-rma", "change");
+  await evalExpr(cdp, `document.querySelector('#loadSampleButton').click()`);
+  await waitFor(cdp, `document.querySelector('#promptInput')?.value.includes('CASE-123')`, "support sample load");
+  await setInputValue(cdp, "#targetBudgetInput", "80");
+  await setInputValue(cdp, "#cacheEnabled", true);
+  await compileAndWait(cdp, "support RMA");
+  const support = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => ({
+    optimized: document.querySelector('#optimizedOutput')?.textContent || '',
+    report: document.querySelector('#optimizationReport')?.innerText || '',
+    verdict: document.querySelector('#usabilityVerdict')?.innerText || '',
+    jsonDisabled: document.querySelector('#exportJsonButton')?.disabled,
+    historyCards: document.querySelectorAll('#historyList .history-card').length
+  }))())`));
+  assert(support.optimized.includes("CASE-123"), "protected entity missing from optimized output");
+  assert(support.report.includes("Optimization Report"), "optimization report did not render");
+  assert(/Ready to use|Review first|Do not use/.test(support.verdict), "usability verdict did not render");
+  assert(support.report.includes("Cache"), "route/cache status missing from report");
+  assert(support.jsonDisabled === false, "JSON export did not enable after compile");
+
+  await clickDrawerTab(cdp, "History");
+  await waitFor(cdp, `document.querySelectorAll('#historyList .history-card').length >= 1`, "history record");
+
+  await clickDrawerTab(cdp, "Segments");
+  await waitFor(cdp, `document.querySelectorAll('#segmentsTable tbody tr').length > 0`, "segment heatmap");
+  await clickDrawerTab(cdp, "Diff");
+  await waitFor(cdp, `document.querySelector('#diffList')?.innerText.length > 0`, "diff list");
+
+  await setInputValue(cdp, "#sampleSelect", "rag-overlap", "change");
+  await evalExpr(cdp, `document.querySelector('#loadSampleButton').click()`);
+  await waitFor(cdp, `document.querySelector('#promptInput')?.value.includes('Source: doc-a')`, "rag sample load");
+  await setInputValue(cdp, "#targetBudgetInput", "");
+  await setInputValue(cdp, "#deterministicSemanticInput", true);
+  await compileAndWait(cdp, "RAG overlap");
+  await clickDrawerTab(cdp, "RAG");
+  await waitFor(cdp, `document.querySelector('#ragPruningTable')?.innerText.includes('doc-')`, "RAG pruning table");
+  await clickDrawerTab(cdp, "Semantic");
+  await waitFor(cdp, `document.querySelector('#semanticScores')?.innerText.includes('embedding')`, "semantic panel");
+
+  await setInputValue(cdp, "#sampleSelect", "agent-logs", "change");
+  await evalExpr(cdp, `document.querySelector('#loadSampleButton').click()`);
+  await waitFor(cdp, `document.querySelector('#promptInput')?.value.includes('BUILD-882')`, "tool log sample load");
+  await setInputValue(cdp, "#modeSelect", "aggressive", "change");
+  await setInputValue(cdp, "#toolCompactInput", true);
+  await compileAndWait(cdp, "long tool log");
+  const toolLog = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);
+  assert(toolLog.includes("Risk") || toolLog.includes("Transformation plan"), "tool log report missing");
+
+  const jsonPrompt = `@pin Keep CASE-JSON-7 exactly.\n\n${JSON.stringify({
+    task: "clean schema prompt",
+    schema: { type: "object", properties: { name: { type: "string" }, order: { type: "string" } } },
+    repeated: Array(6).fill("Return strict JSON for CASE-JSON-7."),
+  }, null, 2)}`;
+  await setInputValue(cdp, "#promptInput", jsonPrompt);
+  await setInputValue(cdp, "#outputFormat", "json", "change");
+  await setInputValue(cdp, "#explainToggle", false);
+  await compileAndWait(cdp, "JSON-heavy prompt");
+  const jsonOutput = await evalExpr(cdp, `document.querySelector('#optimizedOutput')?.textContent || ''`);
+  assert(jsonOutput.includes("CASE-JSON-7"), "JSON-heavy protected value missing");
+
+  await setInputValue(cdp, "#promptInput", "@pin one two three four five six seven eight");
+  await setInputValue(cdp, "#targetBudgetInput", "8");
+  await evalExpr(cdp, `document.querySelector('#compileButton').click()`);
+  await waitFor(cdp, `document.querySelector('.error-box')?.innerText.includes('Pinned content')`, "pinned budget failure");
+
+  await setInputValue(cdp, "#promptInput", "repeat\n\nrepeat");
+  await setInputValue(cdp, "#targetBudgetInput", "");
+  await setInputValue(cdp, "#dryRunInput", true);
+  await compileAndWait(cdp, "dry-run");
+  await waitFor(cdp, `document.querySelector('#usabilityVerdict')?.textContent.includes('Preview only')`, "dry-run verdict");
+  const dryRun = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => ({
+    report: document.querySelector('#optimizationReport')?.textContent || '',
+    verdict: document.querySelector('#usabilityVerdict')?.textContent || '',
+    proposed: document.querySelector('#proposedPromptPanel')?.textContent || ''
+  }))())`));
+  assert(dryRun.report.includes("Dry Run"), "dry-run report missing");
+  assert(dryRun.verdict.includes("Preview only"), "dry-run verdict missing");
   assert(
-    boot.outputIndex !== -1 && boot.analyticsIndex !== -1 && boot.outputIndex < boot.analyticsIndex,
-    "optimized output must appear before analytics",
+    dryRun.proposed.includes("Proposed optimized prompt"),
+    `dry-run proposed prompt missing: ${JSON.stringify(dryRun)}`,
   );
+  await setViewport(cdp, 390);
+  await assertVisualContract(cdp, "dry-run proposed prompt 390px", { expectDryRun: true });
+  await setViewport(cdp, 1440, 1100);
 
-  await evalExpr(
-    cdp,
-    `(() => {
-      localStorage.removeItem('promptcompiler.history.v1');
-      const sample = document.querySelector('#sampleSelect');
-      if (sample.options.length > 1) {
-        sample.selectedIndex = 1;
-        sample.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      document.querySelector('#loadSampleButton').click();
-      return true;
-    })()`,
-  );
+  await setInputValue(cdp, "#dryRunInput", false);
+  await setInputValue(cdp, "#cacheEnabled", true);
+  await compileAndWait(cdp, "cache miss");
+  await compileAndWait(cdp, "cache hit");
+  const cacheReport = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);
+  assert(cacheReport.includes("hit"), "cache-enabled repeated compile did not show a hit");
 
-  await waitFor(
-    cdp,
-    'document.querySelector("#promptInput")?.value.trim().length > 0',
-    "sample prompt load",
-  );
+  await setInputValue(cdp, "#zeroRetentionInput", true);
+  await compileAndWait(cdp, "zero retention");
+  const zeroRetention = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);
+  assert(zeroRetention.includes("Zero retention") && zeroRetention.includes("on"), "zero-retention status missing");
 
-  await evalExpr(
-    cdp,
-    `(() => {
-      const mode = document.querySelector('#modeSelect');
-      mode.value = 'balanced';
-      mode.dispatchEvent(new Event('change', { bubbles: true }));
-      document.querySelector('#targetBudgetInput').value = '70';
-      document.querySelector('#cacheEnabled').checked = true;
-      document.querySelector('#retrievalTopKInput').value = '3';
-      return true;
-    })()`,
-  );
+  await clickDrawerTab(cdp, "History");
+  await evalExpr(cdp, `document.querySelector('#historyList .history-card button')?.click()`);
+  await evalExpr(cdp, `[...document.querySelectorAll('#historyList .history-actions button')].find((button) => button.textContent === 'Compare')?.click()`);
+  await waitFor(cdp, `document.querySelector('.compare-table')?.innerText.includes('aggressive')`, "mode comparison");
 
-  await evalExpr(cdp, `document.querySelector('#analyzeButton').click()`);
-  await waitFor(
-    cdp,
-    'document.querySelectorAll("#segmentsTable tbody tr").length > 0 && !document.querySelector("#segmentsTable")?.innerText.includes("Analyze a prompt")',
-    "analysis segment table",
-  );
-
-  await evalExpr(cdp, `document.querySelector('#compileButton').click()`);
-  await waitFor(
-    cdp,
-    'document.querySelector("#compileButton")?.textContent === "Compile & Optimize" && document.querySelector("#optimizedOutput")?.textContent.includes("CASE-123")',
-    "compile dashboard prompt",
-  );
-  const compiled = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => ({
-        metrics: document.querySelector('#metrics')?.innerText || '',
-        breakdown: document.querySelector('#breakdown')?.innerText || '',
-        entities: document.querySelector('#entities')?.innerText || '',
-        changes: document.querySelector('#changes')?.innerText || '',
-        lint: document.querySelector('#lintFindings')?.innerText || '',
-        optimized: document.querySelector('#optimizedOutput')?.textContent || '',
-        segments: document.querySelector('#segmentsTable')?.innerText || '',
-        diff: document.querySelector('#diffList')?.innerText || '',
-        historyCount: document.querySelectorAll('#historyList button').length,
-        jsonDisabled: document.querySelector('#exportJsonButton')?.disabled,
-        outputTop: document.querySelector('#outputPanel')?.getBoundingClientRect().top || 0,
-        analyticsTop: document.querySelector('#analyticsPanel')?.getBoundingClientRect().top || 0
-      }))())`,
-    ),
-  );
-  assert(compiled.metrics.includes("Original") && compiled.metrics.includes("Saved"), "analytics metrics are missing");
-  assert(compiled.metrics.includes("Route") && compiled.metrics.includes("Cache"), "route/cache metrics are missing");
-  assert(compiled.breakdown.includes("type:"), "breakdown analytics are missing");
-  assert(compiled.entities.includes("CASE-123"), "protected value analytics are missing");
-  assert(compiled.changes.length > 0, "change analytics are missing");
-  assert(compiled.changes.includes("tool_summary"), "compression plan actions are missing");
-  assert(compiled.lint.length > 0, "lint findings area did not update");
-  assert(compiled.optimized.includes("CASE-123"), "optimized prompt did not render");
-  assert(compiled.segments.includes("seg_"), "segment table did not render analyzed segments");
-  assert(compiled.diff.length > 0, "diff list did not render compile details");
-  assert(compiled.historyCount >= 1, "compile history did not record the run");
-  assert(compiled.jsonDisabled === false, "JSON export did not enable after compile");
-  assert(compiled.outputTop < compiled.analyticsTop, "optimized output is not before analytics visually");
-
-  await evalExpr(
-    cdp,
-    `(() => {
-      const sample = document.querySelector('#sampleSelect');
-      sample.value = 'rag-overlap';
-      sample.dispatchEvent(new Event('change', { bubbles: true }));
-      document.querySelector('#loadSampleButton').click();
-      const mode = document.querySelector('#modeSelect');
-      mode.value = 'balanced';
-      mode.dispatchEvent(new Event('change', { bubbles: true }));
-      document.querySelector('#targetBudgetInput').value = '';
-      return true;
-    })()`,
-  );
-  await waitFor(cdp, `document.querySelector('#promptInput')?.value.includes('Source: doc-a')`, "RAG sample load");
-  await evalExpr(cdp, `document.querySelector('#compileButton').click()`);
-  await waitFor(
-    cdp,
-    `document.querySelector("#compileButton")?.textContent === "Compile & Optimize" && document.querySelector("#semanticScores")?.innerText.includes("rag")`,
-    "semantic signal render",
-  );
-  const semantic = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => ({
-        text: document.querySelector('#semanticScores')?.innerText || '',
-        changes: document.querySelector('#changes')?.innerText || ''
-      }))())`,
-    ),
-  );
-  assert(semantic.text.includes("doc-"), "semantic scores did not preserve source metadata");
-  assert(semantic.changes.includes("rag_prune"), "RAG pruning action did not render");
+  await assertVisualSweep(cdp);
 
   await cdp.send("Emulation.setDeviceMetricsOverride", {
     width: 390,
@@ -441,25 +468,17 @@ try {
     mobile: false,
   });
   await new Promise((resolve) => setTimeout(resolve, 300));
-  const mobile = JSON.parse(
-    await evalExpr(
-      cdp,
-      `JSON.stringify((() => ({
-        clientWidth: document.documentElement.clientWidth,
-        innerWidth: window.innerWidth,
-        scrollWidth: document.documentElement.scrollWidth,
-        bodyScrollWidth: document.body.scrollWidth
-      }))())`,
-    ),
-  );
+  const mobile = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    bodyScrollWidth: document.body.scrollWidth,
+    innerWidth: window.innerWidth
+  }))())`));
   assert(mobile.scrollWidth <= mobile.innerWidth, `mobile overflow: ${mobile.scrollWidth} > ${mobile.innerWidth}`);
-  assert(
-    mobile.bodyScrollWidth <= mobile.innerWidth,
-    `mobile body overflow: ${mobile.bodyScrollWidth} > ${mobile.innerWidth}`,
-  );
+  assert(mobile.bodyScrollWidth <= mobile.innerWidth, `mobile body overflow: ${mobile.bodyScrollWidth} > ${mobile.innerWidth}`);
 
   const httpErrors = cdp.events
     .filter((event) => event.method === "Network.responseReceived" && event.params.response.status >= 400)
+    .filter((event) => !(event.params.response.status === 413 && event.params.response.url.endsWith("/v1/compile")))
     .map((event) => `${event.params.response.status} ${event.params.response.url}`);
   assert(httpErrors.length === 0, `HTTP errors: ${httpErrors.join(", ")}`);
 

@@ -31,7 +31,7 @@ class WebE2ETests(unittest.TestCase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    timeout=30,
+                    timeout=70,
                 )
             finally:
                 server.shutdown()

@@ -66,6 +66,15 @@ class EmbeddingTests(unittest.TestCase):
             self.assertEqual(weights, [1, -1, 1, 1, -1])
             self.assertIsNone(store.get("nonexistent"))
 
+    def test_fingerprint_store_accepts_unsigned_64_bit_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = FingerprintStore(db_path=Path(tmp) / "test.sqlite3")
+            high_bit_fingerprint = 0xFFFFFFFFFFFFFFFF
+            store.set("high_bit", high_bit_fingerprint, [1, -1] * 32)
+            fp, weights = store.get("high_bit")
+            self.assertEqual(fp, high_bit_fingerprint)
+            self.assertEqual(weights, [1, -1] * 32)
+
 
 if __name__ == "__main__":
     unittest.main()

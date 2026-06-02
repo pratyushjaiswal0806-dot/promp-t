@@ -101,6 +101,34 @@ class CompilerTests(unittest.TestCase):
         self.assertIn("@pin Keep CASE-123 exactly.", result["optimized_text"])
         self.assertTrue(result["warnings"])
 
+    def test_aggressive_mode_keeps_diagnostic_context_for_handoffs(self):
+        payload = (
+            "@pin Keep incident BUILD-7719 and deployment target macOS exactly.\n\n"
+            "Task: produce the smallest useful context for the next engineer.\n\n"
+            "Tool log:\n"
+            "INFO packaging release artifact\n"
+            "ERROR signing identity missing for macOS release\n"
+            "ERROR notarization retry failed with HTTP 401\n"
+            "INFO retrying upload\n"
+            "INFO retrying upload\n"
+            "INFO retrying upload\n"
+            "Next engineer should check signing credentials and notarization status."
+        )
+
+        result = compile_prompt(
+            payload,
+            mode="aggressive",
+            target_token_budget=75,
+        )
+
+        self.assertIn("BUILD-7719", result["optimized_text"])
+        self.assertIn("macOS", result["optimized_text"])
+        self.assertIn("signing identity missing", result["optimized_text"])
+        self.assertIn("notarization retry failed", result["optimized_text"])
+        self.assertTrue(
+            any("diagnostic context" in warning.lower() for warning in result["warnings"])
+        )
+
     def test_balanced_mode_prunes_redundant_rag_and_reports_semantic_metadata(self):
         payload = (
             "Question: Does a refund over $500 require manager approval?\n\n"

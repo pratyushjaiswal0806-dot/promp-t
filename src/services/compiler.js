@@ -6,12 +6,17 @@ export async function getModels() { return getJson("/api/models"); }
 
 export async function getSamples() { return getJson("/api/samples"); }
 
-export async function analyze(input, model) {
-  return postJson("/api/analyze", { input, model });
+export async function analyze(params, model) {
+  const payload = typeof params === "string" ? { input: params, model } : params;
+  return postJson("/v1/analyze", payload);
 }
 
 export async function compile(params) {
   return postJson("/v1/compile", params);
+}
+
+export async function getTrace(traceId) {
+  return getJson(`/v1/requests/${encodeURIComponent(traceId)}`);
 }
 
 export async function lint(input) {

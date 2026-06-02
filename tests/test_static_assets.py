@@ -23,6 +23,57 @@ class StaticAssetTests(unittest.TestCase):
         policy = (ROOT / "src" / "workbench" / "PolicyControls.jsx").read_text()
         self.assertIn('value="balanced"', policy)
 
+    def test_workbench_exposes_prompt_optimization_workflow_selectors(self):
+        source = "\n".join(
+            [
+                (ROOT / "src" / "workbench" / "WorkbenchShell.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "InputPanel.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "OutputPanel.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "PolicyControls.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "AnalyticsPanel.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "HistoryPanel.jsx").read_text(),
+            ]
+        )
+        for selector_id in (
+            "promptInput",
+            "compileButton",
+            "analyzeButton",
+            "lintButton",
+            "nimButton",
+            "modelSelect",
+            "sampleSelect",
+            "workflowPresetSelect",
+            "targetBudgetInput",
+            "dryRunInput",
+            "zeroRetentionInput",
+            "cacheEnabled",
+            "outputFormat",
+            "maxWordsInput",
+            "explainToggle",
+            "systemPromptRef",
+            "retrievalTopKInput",
+            "toolCompactInput",
+            "deterministicSemanticInput",
+            "optimizedOutput",
+            "optimizationReport",
+            "metrics",
+            "segmentsTable",
+            "diffList",
+            "semanticScores",
+            "ragPruningTable",
+            "historyList",
+            "traceLookupInput",
+        ):
+            self.assertIn(f'id="{selector_id}"', source)
+
+    def test_python_server_defaults_to_documented_port_8765(self):
+        server_source = (ROOT / "promptcompiler" / "fastapi_server.py").read_text()
+        cli_source = (ROOT / "promptcompiler" / "cli.py").read_text()
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("def run(host: str = \"127.0.0.1\", port: int = 8765)", server_source)
+        self.assertIn("default=8765", cli_source)
+        self.assertNotIn("127.0.0.1:8766", readme)
+
     def test_react_vite_project_config_builds_into_web_root(self):
         package = json.loads(PACKAGE_JSON.read_text())
         vite_config = VITE_CONFIG.read_text()

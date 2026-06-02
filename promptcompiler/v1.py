@@ -630,6 +630,8 @@ def _retention_metadata(request: NormalizedV1Request) -> dict[str, Any]:
 
 
 def _compile_cache_key(payload: dict[str, Any], request: NormalizedV1Request) -> str | None:
+    if request.dry_run:
+        return None
     if not request.cache_policy.get("enabled"):
         return None
     return cache_key_for_compile(

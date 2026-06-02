@@ -77,7 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     server = subcommands.add_parser("serve", help="Start the FastAPI server")
     server.add_argument("--host", default="127.0.0.1")
-    server.add_argument("--port", type=int, default=8766)
+    server.add_argument("--port", type=int, default=8765)
 
     analyze = subcommands.add_parser("analyze", help="Analyze a prompt file")
     analyze.add_argument("input", help="Path to a text or JSON prompt file")

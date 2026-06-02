@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { getHealth, getModels, getSamples, analyze, compile, lint, generatePrompt, nimSummarize } from "../../services/compiler.js";
+import { getHealth, getModels, getSamples, analyze, compile, getTrace, lint, generatePrompt, nimSummarize } from "../../services/compiler.js";
 import { readHistory, saveToHistory } from "../../services/history.js";
+import { buildCompilePayload, createDefaultControls, controlsFromPreset } from "../../services/payload.js";
+import { deriveUsabilityVerdict, proposedPromptForDryRun } from "../../services/report.js";
 import { toast } from "../../components/Toast.jsx";
 
 const Ctx = createContext(null);
@@ -23,6 +25,8 @@ export function WorkbenchProvider({ children }) {
   const [promptIdea, setPromptIdea] = useState("");
   const [promptKind, setPromptKind] = useState("website");
   const [mode, setMode] = useState("balanced");
+  const [workflowPresetId, setWorkflowPresetId] = useState("");
+  const [controls, setControls] = useState(createDefaultControls);
   const [metrics, setMetrics] = useState(EMPTY_METRICS);
   const [breakdown, setBreakdown] = useState([]);
   const [entities, setEntities] = useState([]);
@@ -30,8 +34,13 @@ export function WorkbenchProvider({ children }) {
   const [lintFindings, setLintFindings] = useState([]);
   const [segments, setSegments] = useState([]);
   const [diffItems, setDiffItems] = useState([]);
+  const [ragRows, setRagRows] = useState([]);
   const [semantic, setSemantic] = useState(null);
+  const [report, setReport] = useState(null);
   const [history, setHistory] = useState([]);
+  const [modeComparisons, setModeComparisons] = useState([]);
+  const [traceLookupId, setTraceLookupId] = useState("");
+  const [traceLookupResult, setTraceLookupResult] = useState(null);
   const [lastCompile, setLastCompile] = useState(null);
   const [error, setError] = useState("");
   const [workingAction, setWorkingAction] = useState("");
@@ -87,7 +96,10 @@ export function WorkbenchProvider({ children }) {
     setLintFindings([]);
     setSegments([]);
     setDiffItems([]);
+    setRagRows([]);
     setSemantic(null);
+    setReport(null);
+    setModeComparisons([]);
     setHistory(readHistory());
   }, []);
 
@@ -97,54 +109,113 @@ export function WorkbenchProvider({ children }) {
     finally { setWorkingAction((c) => (c === name ? "" : c)); }
   }, [showError]);
 
-  const compilePayload = useCallback(() => ({
-    input: inputValue,
-    model: selectedModel,
-    mode,
-    target_token_budget: null,
-    dry_run: false,
-  }), [inputValue, selectedModel, mode]);
+  const updateControl = useCallback((key, value) => {
+    setControls((current) => ({ ...current, [key]: value }));
+  }, []);
+
+  const applyWorkflowPreset = useCallback((presetId) => {
+    setWorkflowPresetId(presetId);
+    const next = controlsFromPreset(presetId, controls);
+    if (next.mode) setMode(next.mode);
+    const { mode: _presetMode, ...controlValues } = next;
+    setControls(controlValues);
+  }, [controls]);
+
+  const applyCompileResult = useCallback((result, prompt, resultMode, resultModel, resultControls) => {
+    const c = result.compile || result;
+    const text = result.optimized_prompt || c.optimized_text || "";
+    const orig = result.original_token_count ?? c.original_tokens ?? 0;
+    const opt = result.optimized_token_count ?? c.optimized_tokens ?? 0;
+    const saved = c.tokens_saved ?? Math.max(0, orig - opt);
+    const savings = result.token_reduction_percent ?? ((c.savings_ratio || 0) * 100);
+    const nextDiff = c.diff || result.diff || [];
+    const nextSemantic = result.semantic || c.semantic || null;
+
+    setLastCompile(result);
+    setOptimizedOutput(text);
+    setMetrics([
+      ["Original", orig],
+      ["Optimized", opt],
+      ["Saved", saved],
+      ["Savings", `${Number(savings || 0).toFixed(1)}%`],
+      ["Risk", c.plan?.risk_level || _riskLabel(c.risk_score)],
+      ["Route", result.route?.tier || "local"],
+      ["Cache", result.cache?.status || c.cache_status || "bypass"],
+      ["Mode", resultMode],
+    ]);
+    setBreakdown(Object.entries(_diffBreakdown(nextDiff)));
+    setEntities(result.preservation?.checked_entities || c.preservation?.checked_entities || []);
+    setChanges(_buildChanges(c, result));
+    setDiffItems(nextDiff);
+    setSegments(_segmentsFromCompile(nextDiff, result.analysis?.segments || []));
+    setSemantic(nextSemantic);
+    setRagRows(_ragRows(nextSemantic));
+    setReport(_buildReport(result, c, resultMode, resultModel, resultControls));
+    setTraceLookupResult(null);
+    return { text, orig, opt, saved, savings, trace_id: result.trace_id, mode: resultMode, model: resultModel, prompt };
+  }, []);
+
+  const runCompileForPrompt = useCallback(async ({
+    prompt = inputValue,
+    compileMode = mode,
+    model = selectedModel,
+    compileControls = controls,
+    saveHistory = true,
+  } = {}) => {
+    const payload = buildCompilePayload({
+      inputValue: prompt,
+      selectedModel: model,
+      mode: compileMode,
+      controls: compileControls,
+    });
+    const result = await compile(payload);
+    const summary = applyCompileResult(result, prompt, compileMode, model, compileControls);
+    const l = await lint(prompt);
+    setLintFindings(l.findings || []);
+    if (saveHistory) {
+      const item = {
+        id: String(Date.now()),
+        model,
+        mode: compileMode,
+        prompt,
+        controls: compileControls,
+        result,
+        summary,
+        savedAt: new Date().toISOString(),
+      };
+      setHistory(saveToHistory(item));
+    }
+    return result;
+  }, [applyCompileResult, controls, inputValue, mode, selectedModel]);
 
   // Actions
   const handleAnalyze = useCallback(async () => {
     if (!inputValue.trim()) { showError("Paste a prompt before analyzing."); inputRef.current?.focus(); return; }
     await runAction("analyze", async () => {
-      const result = await analyze(inputValue, selectedModel);
-      setMetrics([["Original", result.total_tokens], ["Segments", result.segment_count], ["Opportunity", `${Math.round((result.compression_opportunity || 0) * 100)}%`], ["Model", result.model || selectedModel]]);
-      setBreakdown(Object.entries(result.by_type || {}));
-      setEntities(result.protected_entities || []);
-      setSegments(result.segments || []);
+      const payload = buildCompilePayload({ inputValue, selectedModel, mode, controls });
+      const result = await analyze(payload);
+      const analysis = result.analysis || result;
+      setMetrics([
+        ["Original", result.total_tokens],
+        ["Segments", result.segment_count],
+        ["Opportunity", `${Math.round((result.compression_opportunity || 0) * 100)}%`],
+        ["Budget", result.budget_utilization ? `${Math.round(result.budget_utilization * 100)}%` : "-"],
+        ["Model", result.model || selectedModel],
+      ]);
+      setBreakdown(Object.entries(analysis.by_type || {}));
+      setEntities(analysis.protected_entities || []);
+      setSegments(analysis.segments || result.components || []);
+      setReport(_buildAnalyzeReport(result));
       setSemantic(null);
       const l = await lint(inputValue);
       setLintFindings(l.findings || []);
     });
-  }, [inputValue, selectedModel, runAction, showError]);
+  }, [controls, inputValue, mode, selectedModel, runAction, showError]);
 
   const handleCompile = useCallback(async () => {
     if (!inputValue.trim()) { showError("Paste a prompt before compiling."); inputRef.current?.focus(); return; }
-    await runAction("compile", async () => {
-      const result = await compile(compilePayload());
-      const c = result.compile || result;
-      const text = result.optimized_prompt || c.optimized_text || "";
-      const orig = result.original_token_count ?? c.original_tokens ?? 0;
-      const opt = result.optimized_token_count ?? c.optimized_tokens ?? 0;
-      const saved = c.tokens_saved ?? Math.max(0, orig - opt);
-      const savings = result.token_reduction_percent ?? ((c.savings_ratio || 0) * 100);
-      setLastCompile(result);
-      setOptimizedOutput(text);
-      setMetrics([["Original", orig], ["Optimized", opt], ["Saved", saved], ["Savings", `${Number(savings || 0).toFixed(1)}%`], ["Mode", mode], ["Model", selectedModel]]);
-      setBreakdown(Object.entries(c.diff ? _diffBreakdown(c.diff) : []));
-      setEntities(result.preservation?.checked_entities || c.preservation?.checked_entities || []);
-      setChanges(_buildChanges(c, result));
-      setDiffItems(c.diff || result.diff || []);
-      setSemantic(result.semantic || c.semantic || null);
-      const l = await lint(inputValue);
-      setLintFindings(l.findings || []);
-      const item = { id: String(Date.now()), model: selectedModel, prompt: inputValue, result, savedAt: new Date().toISOString() };
-      const next = saveToHistory(item);
-      setHistory(next);
-    });
-  }, [inputValue, selectedModel, mode, compilePayload, runAction, showError]);
+    await runAction("compile", async () => runCompileForPrompt());
+  }, [inputValue, runAction, runCompileForPrompt, showError]);
 
   const handleLint = useCallback(async () => {
     if (!inputValue.trim()) { showError("Paste a prompt before linting."); inputRef.current?.focus(); return; }
@@ -164,6 +235,8 @@ export function WorkbenchProvider({ children }) {
       setOptimizedOutput(EMPTY_OUTPUT);
       setMetrics([["Generated", String(gen.length)], ["Type", result.kind || promptKind], ["Model", result.model || selectedModel], ["Next", "Analyze or compile"]]);
       setChanges([{ type: "plan", label: "generated extensive prompt" }]);
+      setReport(null);
+      setRagRows([]);
       const l = await lint(gen);
       setLintFindings(l.findings || []);
     });
@@ -179,6 +252,16 @@ export function WorkbenchProvider({ children }) {
       setMetrics([["Original", String(inputValue.length)], ["Optimized", String(summary.length)], ["Mode", "NIM"], ["Model", result.model || selectedModel]]);
       setEntities(result.preservation?.checked_entities || []);
       setChanges([{ type: "change", label: result.preservation?.ok ? "NIM summary preserved protected values." : "NIM summary is missing protected values." }]);
+      setReport({
+        title: "External NIM Summary",
+        traceId: "",
+        risk: result.preservation?.ok ? "low" : "review",
+        preservation: result.preservation?.ok ? "preserved" : "missing values",
+        missingEntities: result.preservation?.missing_entities || [],
+        warnings: result.preservation?.ok ? [] : ["NIM summary may be missing protected values."],
+        summaryRows: [["Route", "NVIDIA NIM"], ["Model", result.model || selectedModel]],
+        transformations: [{ type: "external_summary", reason: "Explicit NIM action confirmed by user." }],
+      });
     });
   }, [inputValue, selectedModel, runAction, showError]);
 
@@ -196,6 +279,14 @@ export function WorkbenchProvider({ children }) {
     URL.revokeObjectURL(url);
   }, [canExport, optimizedOutput]);
 
+  const handleExportJson = useCallback(() => {
+    if (!lastCompile) return;
+    const blob = new Blob([JSON.stringify(lastCompile, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "promptcompiler-report.json"; a.click();
+    URL.revokeObjectURL(url);
+  }, [lastCompile]);
+
   const importFile = useCallback(async (file) => {
     if (!file) return;
     try { setInputValue(await file.text()); resetWorkbench(); } catch { showError("Could not read file."); }
@@ -210,17 +301,71 @@ export function WorkbenchProvider({ children }) {
 
   const replayHistory = useCallback((item) => {
     setInputValue(item.prompt || "");
+    if (item.mode) setMode(item.mode);
+    if (item.controls) setControls({ ...createDefaultControls(), ...item.controls });
     if (item.result) {
-      setLastCompile(item.result);
-      const c = item.result.compile || item.result;
-      const text = item.result.optimized_prompt || c.optimized_text || "";
-      setOptimizedOutput(text);
-      setDiffItems(c.diff || item.result.diff || []);
-      setEntities(item.result.preservation?.checked_entities || c.preservation?.checked_entities || []);
-      setChanges(_buildChanges(c, item.result));
-      setSemantic(item.result.semantic || c.semantic || null);
+      applyCompileResult(
+        item.result,
+        item.prompt || "",
+        item.mode || item.result.mode || mode,
+        item.model || selectedModel,
+        item.controls || controls,
+      );
     }
-  }, []);
+  }, [applyCompileResult, controls, mode, selectedModel]);
+
+  const rerunHistory = useCallback(async (item, nextMode) => {
+    const prompt = item.prompt || "";
+    if (!prompt.trim()) return;
+    setInputValue(prompt);
+    setMode(nextMode || item.mode || mode);
+    await runAction("history", async () => runCompileForPrompt({
+      prompt,
+      compileMode: nextMode || item.mode || mode,
+      model: item.model || selectedModel,
+      compileControls: item.controls || controls,
+      saveHistory: true,
+    }));
+  }, [controls, mode, runAction, runCompileForPrompt, selectedModel]);
+
+  const compareHistoryModes = useCallback(async (item) => {
+    const prompt = item.prompt || inputValue;
+    if (!prompt.trim()) { showError("No prompt is available for mode comparison."); return; }
+    await runAction("compare", async () => {
+      const rows = [];
+      for (const compareMode of ["lossless", "balanced", "aggressive"]) {
+        try {
+          const result = await compile(buildCompilePayload({
+            inputValue: prompt,
+            selectedModel: item.model || selectedModel,
+            mode: compareMode,
+            controls: item.controls || controls,
+          }));
+          const c = result.compile || result;
+          rows.push({
+            mode: compareMode,
+            optimizedTokens: result.optimized_token_count ?? c.optimized_tokens ?? 0,
+            saved: c.tokens_saved ?? 0,
+            risk: c.plan?.risk_level || _riskLabel(c.risk_score),
+            warnings: (c.warnings || result.warnings || []).length,
+            traceId: result.trace_id,
+          });
+        } catch (error) {
+          rows.push({ mode: compareMode, error: error.message });
+        }
+      }
+      setModeComparisons(rows);
+    });
+  }, [controls, inputValue, runAction, selectedModel, showError]);
+
+  const handleTraceLookup = useCallback(async (traceId = traceLookupId) => {
+    const id = String(traceId || "").trim();
+    if (!id) { showError("Enter a trace ID first."); return; }
+    setTraceLookupId(id);
+    await runAction("trace", async () => {
+      setTraceLookupResult(await getTrace(id));
+    });
+  }, [runAction, showError, traceLookupId]);
 
   const ctx = {
     inputRef, fileInputRef,
@@ -230,15 +375,17 @@ export function WorkbenchProvider({ children }) {
     samples, selectedSampleId, setSelectedSampleId,
     promptIdea, setPromptIdea, promptKind, setPromptKind,
     mode, setMode,
+    workflowPresetId, setWorkflowPresetId, applyWorkflowPreset,
+    controls, updateControl,
     metrics, breakdown, entities, changes, lintFindings,
-    segments, diffItems, semantic,
-    history, lastCompile,
+    segments, diffItems, ragRows, semantic, report,
+    history, lastCompile, modeComparisons, traceLookupId, setTraceLookupId, traceLookupResult,
     error, clearError,
     workingAction, appStatus,
     canExport,
     handleAnalyze, handleCompile, handleLint, handleGenerate, handleNim,
-    handleCopy, handleExportTxt,
-    importFile, loadSample, replayHistory,
+    handleCopy, handleExportTxt, handleExportJson,
+    importFile, loadSample, replayHistory, rerunHistory, compareHistoryModes, handleTraceLookup,
     resetWorkbench,
   };
 
@@ -253,10 +400,16 @@ export function useWorkbench() {
 
 function _buildChanges(compile, result) {
   const plan = (compile.plan || result.plan)?.actions || [];
+  const transformations = result.transformations || [];
   const warnings = compile.warnings || result.warnings || [];
   return [
     ...warnings.map((w) => ({ type: "warning", label: w })),
     ...(compile.changes || result.changes || []).map((item) => ({ type: "change", label: _changeLabel(item) })),
+    ...transformations.map((item) => ({
+      type: item.type || "transform",
+      label: `${item.type || "transform"}: ${item.reason || "Applied by compiler."}`,
+      tokens: item.estimated_tokens_saved,
+    })),
     ...plan.map((a) => ({ type: "plan", label: `${a.action || "plan"}: ${a.reason || ""}` })),
   ];
 }
@@ -270,4 +423,109 @@ function _changeLabel(item) {
 
 function _diffBreakdown(diff) {
   return diff.reduce((acc, item) => { const k = `type:${item.type || "unknown"}`; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
+}
+
+function _riskLabel(score) {
+  if (score === undefined || score === null) return "unknown";
+  if (Number(score) >= 0.66) return "high";
+  if (Number(score) >= 0.34) return "medium";
+  return "low";
+}
+
+function _buildReport(result, compile, mode, model, controls) {
+  const warnings = compile.warnings || result.warnings || [];
+  const preservation = result.preservation || compile.preservation || {};
+  const transformations = result.transformations?.length
+    ? result.transformations
+    : (compile.plan?.actions || []).map((action) => ({
+      type: action.action || "plan",
+      reason: action.reason || "",
+      estimated_tokens_saved: action.estimated_tokens_saved,
+    }));
+  const sessionId = result.session_id || controls?.sessionId || "";
+  const verdict = deriveUsabilityVerdict(result);
+  const proposedPrompt = proposedPromptForDryRun(result);
+  return {
+    title: result.dry_run ? "Dry Run Optimization Report" : "Optimization Report",
+    traceId: result.trace_id || "",
+    verdict,
+    proposedPrompt,
+    risk: compile.plan?.risk_level || _riskLabel(compile.risk_score),
+    riskScore: compile.risk_score,
+    preservation: preservation.ok ? "preserved" : "review required",
+    missingEntities: preservation.missing_entities || [],
+    warnings,
+    summaryRows: [
+      ["Before cost", `$${Number(result.estimated_cost_before_usd || 0).toFixed(6)}`],
+      ["After cost", `$${Number(result.estimated_cost_after_usd || 0).toFixed(6)}`],
+      ["Cost reduction", `${Number(result.estimated_cost_reduction_percent || 0).toFixed(1)}%`],
+      ["Route", result.route?.tier || "local"],
+      ["Cache", result.cache?.status || compile.cache_status || "bypass"],
+      ["Mode", mode],
+      ["Model", model],
+      ["Zero retention", result.retention?.zero_retention ? "on" : "off"],
+      ["Session", sessionId || "one-off"],
+      ["Compaction", sessionId ? "available through session context" : "not active for one-off compile"],
+    ],
+    transformations,
+  };
+}
+
+function _buildAnalyzeReport(result) {
+  return {
+    title: "Verify Report",
+    traceId: result.trace_id || "",
+    risk: "preflight",
+    preservation: `${result.pinned_tokens || 0} pinned tokens`,
+    missingEntities: [],
+    warnings: [],
+    summaryRows: [
+      ["Recommendation", result.recommendation?.should_compile ? "compile" : "keep"],
+      ["Reason", result.recommendation?.reason || "analysis complete"],
+      ["Budget use", result.budget_utilization ? `${Math.round(result.budget_utilization * 100)}%` : "-"],
+      ["Zero retention", result.retention?.zero_retention ? "on" : "off"],
+      ["Trace", result.trace_id || "-"],
+    ],
+    transformations: result.components?.map((component) => ({
+      type: component.component_type,
+      reason: `${component.token_count} tokens, ${component.is_pinned ? "pinned" : "editable"}`,
+      estimated_tokens_saved: null,
+    })) || [],
+  };
+}
+
+function _segmentsFromCompile(diff, fallbackSegments) {
+  if (fallbackSegments?.length) return fallbackSegments;
+  return (diff || []).map((item) => {
+    const text = String(item.original_text || item.optimized_text || "");
+    return {
+      id: item.segment_id,
+      type: item.type,
+      role: item.role,
+      tokens: Math.max(1, Math.round(text.length / 4)),
+      pinned: Boolean(item.pinned),
+      status: item.status,
+      text,
+      risk: item.pinned ? 1 : item.status === "removed" ? 0.35 : 0.2,
+    };
+  });
+}
+
+function _ragRows(semantic) {
+  if (!semantic?.chunks) return [];
+  const removed = new Set(semantic.removed_chunk_ids || []);
+  return semantic.chunks
+    .filter((chunk) => chunk.segment_type === "rag" || chunk.source)
+    .map((chunk) => ({
+      id: chunk.id,
+      source: chunk.source || chunk.segment_id,
+      tokens: chunk.tokens,
+      relevance: chunk.query_relevance_score,
+      similarity: chunk.inter_chunk_similarity_score,
+      risk: chunk.compression_risk_score,
+      decision: removed.has(chunk.id) || chunk.decision === "removed" ? "removed" : "kept",
+      why: removed.has(chunk.id)
+        ? `Removed as redundant with ${chunk.redundant_with || "a stronger retained chunk"}`
+        : "Kept for relevance, novelty, protected values, or pinning",
+    }));
 }

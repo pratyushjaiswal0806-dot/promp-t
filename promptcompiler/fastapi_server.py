@@ -351,7 +351,7 @@ class PromptCompilerHandler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
 
-def run(host: str = "127.0.0.1", port: int = 8766) -> None:
+def run(host: str = "127.0.0.1", port: int = 8765) -> None:
     """Start the FastAPI server with uvicorn.
 
     Parameters
@@ -359,7 +359,7 @@ def run(host: str = "127.0.0.1", port: int = 8766) -> None:
     host : str
         Bind address (default 127.0.0.1).
     port : int
-        Port number (default 8766).
+        Port number (default 8765).
     """
     import uvicorn
 

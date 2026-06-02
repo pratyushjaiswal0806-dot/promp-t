@@ -51,11 +51,13 @@ PROJECT_BLUEPRINT.md Combined architecture and roadmap reference
 - npm
 
 The Python code uses the standard library for the local server and core tests. The frontend uses Vite and React.
+Install the Python API/test dependencies from `requirements.txt` before running the server or full suite.
 
 ## Quickstart
 
 ```bash
 npm install
+python3 -m pip install -r requirements.txt
 cp .env.example .env
 npm run build
 
@@ -95,7 +97,7 @@ python3 -m promptcompiler.cli serve
 Open:
 
 ```text
-http://127.0.0.1:8766
+http://127.0.0.1:8765
 ```
 
 For frontend development with Vite proxying API calls to the Python server:
@@ -121,7 +123,7 @@ python3 -m promptcompiler.cli compile prompt.json --mode balanced --smoke-test
 Analyze prompt structure:
 
 ```bash
-curl -s http://127.0.0.1:8766/v1/analyze \
+curl -s http://127.0.0.1:8765/v1/analyze \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o-mini",
@@ -136,7 +138,7 @@ curl -s http://127.0.0.1:8766/v1/analyze \
 Compile and reduce a prompt:
 
 ```bash
-curl -s http://127.0.0.1:8766/v1/compile \
+curl -s http://127.0.0.1:8765/v1/compile \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o-mini",

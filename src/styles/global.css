@@ -1,7 +1,36 @@
 ::selection { background: var(--accent-lime); color: var(--bg); }
 :focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 2px; }
+button:focus-visible,
+.btn:focus-visible,
+.compact-input:focus-visible,
+.drawer-tab:focus-visible,
+.topnav button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(199, 248, 90, 0.18);
+}
 button:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
 
-h1, h2, h3, h4, h5, h6 { font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; }
+h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
 code, pre { font-family: var(--font-mono); }
 pre { white-space: pre-wrap; word-break: break-word; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
