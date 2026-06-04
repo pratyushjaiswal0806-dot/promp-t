@@ -6,6 +6,13 @@ export function Drawer({ tabs = [], defaultTab, defaultHeight = 200, children })
   const [height, setHeight] = useState(defaultHeight);
   const [dragging, setDragging] = useState(false);
   const drawerRef = useRef(null);
+  const primaryTabs = tabs.some((tab) => tab.primary)
+    ? tabs.filter((tab) => tab.primary)
+    : tabs;
+  const secondaryTabs = tabs.some((tab) => tab.primary)
+    ? tabs.filter((tab) => !tab.primary)
+    : [];
+  const secondaryActive = secondaryTabs.some((tab) => tab.id === activeTab);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -38,7 +45,7 @@ export function Drawer({ tabs = [], defaultTab, defaultHeight = 200, children })
       <div className="drawer-handle" onMouseDown={handleMouseDown} title="Drag to resize">⋮</div>
       {tabs.length > 0 && (
         <div className="drawer-tabs">
-          {tabs.map((tab) => (
+          {primaryTabs.map((tab) => (
             <button
               key={tab.id}
               className={`drawer-tab ${activeTab === tab.id ? "active" : ""}`}
@@ -48,6 +55,24 @@ export function Drawer({ tabs = [], defaultTab, defaultHeight = 200, children })
               {tab.label}
             </button>
           ))}
+          {secondaryTabs.length > 0 && (
+            <label className="drawer-more-label" htmlFor="drawerMoreSelect">
+              <span>More</span>
+              <select
+                id="drawerMoreSelect"
+                className={`drawer-more-select ${secondaryActive ? "active" : ""}`}
+                value={secondaryActive ? activeTab : ""}
+                onChange={(event) => {
+                  if (event.target.value) setActiveTab(event.target.value);
+                }}
+              >
+                <option value="">Panels</option>
+                {secondaryTabs.map((tab) => (
+                  <option key={tab.id} value={tab.id}>{tab.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
       <div className="drawer-body">

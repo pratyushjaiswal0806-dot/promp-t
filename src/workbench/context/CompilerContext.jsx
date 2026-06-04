@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect, us
 import { getHealth, getModels, getSamples, analyze, compile, getTrace, lint, generatePrompt, nimSummarize } from "../../services/compiler.js";
 import { readHistory, saveToHistory } from "../../services/history.js";
 import { buildCompilePayload, createDefaultControls, controlsFromPreset } from "../../services/payload.js";
-import { deriveUsabilityVerdict, proposedPromptForDryRun } from "../../services/report.js";
+import { buildTrustProfile, deriveUsabilityVerdict, optimizationInsight, proposedPromptForDryRun } from "../../services/report.js";
 import { toast } from "../../components/Toast.jsx";
 
 const Ctx = createContext(null);
@@ -130,10 +130,8 @@ export function WorkbenchProvider({ children }) {
     const savings = result.token_reduction_percent ?? ((c.savings_ratio || 0) * 100);
     const nextDiff = c.diff || result.diff || [];
     const nextSemantic = result.semantic || c.semantic || null;
-
-    setLastCompile(result);
-    setOptimizedOutput(text);
-    setMetrics([
+    const contextFile = result.context_file || c.context_file || null;
+    const metricRows = [
       ["Original", orig],
       ["Optimized", opt],
       ["Saved", saved],
@@ -142,7 +140,20 @@ export function WorkbenchProvider({ children }) {
       ["Route", result.route?.tier || "local"],
       ["Cache", result.cache?.status || c.cache_status || "bypass"],
       ["Mode", resultMode],
-    ]);
+    ];
+    if (contextFile) {
+      metricRows.splice(
+        4,
+        0,
+        ["First call", contextFile.net_first_call_savings],
+        ["Per reuse", contextFile.net_reuse_savings_per_call],
+        ["Break-even", contextFile.break_even_calls || "-"],
+      );
+    }
+
+    setLastCompile(result);
+    setOptimizedOutput(text);
+    setMetrics(metricRows);
     setBreakdown(Object.entries(_diffBreakdown(nextDiff)));
     setEntities(result.preservation?.checked_entities || c.preservation?.checked_entities || []);
     setChanges(_buildChanges(c, result));
@@ -150,7 +161,7 @@ export function WorkbenchProvider({ children }) {
     setSegments(_segmentsFromCompile(nextDiff, result.analysis?.segments || []));
     setSemantic(nextSemantic);
     setRagRows(_ragRows(nextSemantic));
-    setReport(_buildReport(result, c, resultMode, resultModel, resultControls));
+    setReport(_buildReport(result, c, resultMode, resultModel, resultControls, prompt));
     setTraceLookupResult(null);
     return { text, orig, opt, saved, savings, trace_id: result.trace_id, mode: resultMode, model: resultModel, prompt };
   }, []);
@@ -333,7 +344,7 @@ export function WorkbenchProvider({ children }) {
     if (!prompt.trim()) { showError("No prompt is available for mode comparison."); return; }
     await runAction("compare", async () => {
       const rows = [];
-      for (const compareMode of ["lossless", "balanced", "aggressive"]) {
+      for (const compareMode of ["lossless", "balanced", "aggressive", "context_file"]) {
         try {
           const result = await compile(buildCompilePayload({
             inputValue: prompt,
@@ -432,7 +443,7 @@ function _riskLabel(score) {
   return "low";
 }
 
-function _buildReport(result, compile, mode, model, controls) {
+function _buildReport(result, compile, mode, model, controls, prompt = "") {
   const warnings = compile.warnings || result.warnings || [];
   const preservation = result.preservation || compile.preservation || {};
   const transformations = result.transformations?.length
@@ -443,12 +454,32 @@ function _buildReport(result, compile, mode, model, controls) {
       estimated_tokens_saved: action.estimated_tokens_saved,
     }));
   const sessionId = result.session_id || controls?.sessionId || "";
+  const contextFile = result.context_file || compile.context_file || null;
   const verdict = deriveUsabilityVerdict(result);
+  const insight = optimizationInsight(result);
   const proposedPrompt = proposedPromptForDryRun(result);
+  const trustProfile = buildTrustProfile({ inputValue: prompt, mode, result });
+  const semantic = result.semantic || compile.semantic || {};
+  const semanticSummary = semantic.summary || {};
+  const contextRows = contextFile
+    ? [
+      ["Compact tokens", contextFile.compact_tokens],
+      ["Decode tokens", contextFile.decode_tokens],
+      ["First call", contextFile.net_first_call_savings],
+      ["Per reuse", contextFile.net_reuse_savings_per_call],
+      ["Break-even", contextFile.break_even_calls || "-"],
+      ["Expected calls", contextFile.reuse_expected_calls],
+      ["Total reuse", contextFile.total_reuse_savings],
+    ]
+    : [];
   return {
-    title: result.dry_run ? "Dry Run Optimization Report" : "Optimization Report",
+    title: contextFile
+      ? "Reusable Context Report"
+      : result.dry_run ? "Dry Run Optimization Report" : "Optimization Report",
     traceId: result.trace_id || "",
     verdict,
+    insight,
+    trustProfile,
     proposedPrompt,
     risk: compile.plan?.risk_level || _riskLabel(compile.risk_score),
     riskScore: compile.risk_score,
@@ -456,6 +487,12 @@ function _buildReport(result, compile, mode, model, controls) {
     missingEntities: preservation.missing_entities || [],
     warnings,
     summaryRows: [
+      ...contextRows,
+      ["Prompt type", trustProfile.promptType],
+      ["Trust", trustProfile.confidence.label],
+      ["Best mode", trustProfile.bestOptimization],
+      ["Semantic", semantic.scorer || "lexical"],
+      ["RAG removed", semanticSummary.removed_chunks ?? 0],
       ["Before cost", `$${Number(result.estimated_cost_before_usd || 0).toFixed(6)}`],
       ["After cost", `$${Number(result.estimated_cost_after_usd || 0).toFixed(6)}`],
       ["Cost reduction", `${Number(result.estimated_cost_reduction_percent || 0).toFixed(1)}%`],

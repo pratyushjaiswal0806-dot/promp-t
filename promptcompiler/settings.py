@@ -33,7 +33,7 @@ class CompilerSettings(BaseSettings):
 
     pass_pipeline: str = "default.v1"
     default_model: str = "openai/gpt-oss-120b"
-    default_mode: Literal["lossless", "balanced", "aggressive"] = "lossless"
+    default_mode: Literal["lossless", "balanced", "aggressive", "context_file"] = "lossless"
     pinned_budget_ratio: float = 0.25
     session_trigger_threshold: float = 0.7
     session_summary_ratio: float = 0.22

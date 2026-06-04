@@ -9,6 +9,9 @@ dist/
 coverage/
 artifacts/
 .worktrees/
+config/secret_key
+config/logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

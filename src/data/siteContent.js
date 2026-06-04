@@ -17,7 +17,7 @@ export const homeHero = {
   primaryAction: { label: "Open Workbench", target: "workbench" },
   secondaryAction: { label: "See Pipeline", target: "how-it-works" },
   proof: [
-    "Lossless, balanced, and aggressive compile modes",
+    "Lossless, balanced, aggressive, and reusable-context compile modes",
     "Local-first defaults with zero-retention trace posture",
     "API, SDK, and OpenAI-compatible proxy paths",
   ],
@@ -68,7 +68,7 @@ export const pipelineJourney = [
   {
     step: "04",
     title: "Compile for a target",
-    body: "Lossless, balanced, or aggressive modes produce an optimized prompt with budget, cache, and routing metadata attached to the trace.",
+    body: "Lossless, balanced, aggressive, or reusable-context modes produce optimized prompt output with budget, cache, and routing metadata attached to the trace.",
     signal: "Output",
   },
   {
@@ -236,7 +236,7 @@ export const observabilitySections = [
 
 export const motionStats = [
   { value: "4", label: "Pipeline stages", detail: "parse, protect, compile, measure" },
-  { value: "3", label: "Compile modes", detail: "lossless, balanced, aggressive" },
+  { value: "4", label: "Compile modes", detail: "lossless, balanced, aggressive, context_file" },
   { value: "0", label: "Default retention", detail: "raw payloads stay out of stored traces" },
   { value: "1", label: "Local workbench", detail: "controls, diffs, analytics, history" },
 ];

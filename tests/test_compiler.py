@@ -66,6 +66,19 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(result["tokens_saved"], 0)
         self.assertEqual(result["savings_ratio"], 0)
 
+    def test_compile_uses_segmented_accounting_for_optimized_reuse_estimate(self):
+        payload = "alpha beta gamma\n\nalpha beta gamma\n\nunique requirement"
+
+        result = compile_prompt(payload, mode="balanced")
+
+        accounting = result["token_accounting"]
+        self.assertEqual(accounting["method"], "segmented_prompt_estimate")
+        self.assertEqual(accounting["original_tokens"], result["original_tokens"])
+        self.assertEqual(accounting["optimized_tokens"], result["optimized_tokens"])
+        self.assertEqual(accounting["optimized_reuse_tokens"], result["optimized_tokens"])
+        self.assertGreater(accounting["segment_overhead_tokens"], 0)
+        self.assertLess(result["optimized_tokens"], result["original_tokens"])
+
     def test_compile_dry_run_returns_plan_without_activating_output(self):
         result = compile_prompt("alpha\n\nalpha", dry_run=True)
 
@@ -187,6 +200,55 @@ class CompilerTests(unittest.TestCase):
                 for action in result["plan"]["actions"]
             )
         )
+
+    def test_context_file_mode_compacts_reusable_prompt_with_savings_math(self):
+        payload = (
+            "You are a senior software engineer specializing in code review.\n\n"
+            "When the user shares a pull request or code snippet:\n\n"
+            "First, identify any bugs, security issues, or correctness problems. Be specific about which lines.\n"
+            "Second, point out style issues, but only the ones that meaningfully affect readability.\n"
+            "Third, suggest concrete improvements with example code.\n\n"
+            "Do not be sycophantic. Do not preface your response with summaries of what you are about to do.\n"
+            "If the code looks fine, just say so briefly.\n"
+            "Always preserve any code identifiers, file paths, and line numbers exactly as the user wrote them."
+        )
+
+        result = compile_prompt(payload, mode="context_file")
+
+        self.assertEqual(result["mode"], "context_file")
+        self.assertIn("context_file", result)
+        self.assertIn("senior software engineer specializing code review", result["optimized_text"])
+        self.assertIn("do not preface response with summary of planned review", result["optimized_text"])
+        self.assertIn("preserve code identifiers file paths line numbers exactly as user wrote", result["optimized_text"])
+        self.assertLess(result["context_file"]["compact_tokens"], result["original_tokens"])
+        self.assertGreater(result["context_file"]["decode_tokens"], 0)
+        self.assertGreaterEqual(result["context_file"]["break_even_calls"], 1)
+        self.assertTrue(result["context_file"]["preservation"]["negations_preserved"])
+        self.assertTrue(result["context_file"]["preservation"]["ordered_steps_preserved"])
+        self.assertTrue(
+            any(action["action"] == "context_file_compact" for action in result["plan"]["actions"])
+        )
+
+    def test_context_file_mode_keeps_protected_entities_and_warns_when_reuse_is_too_low(self):
+        payload = (
+            "System policy for CASE-123: Do not alter /srv/app/main.py:42.\n"
+            "Never remove invoice INV-900 or deadline 2026-05-23 from responses.\n"
+            "Return JSON only when the user asks for export."
+        )
+
+        result = compile_prompt(
+            payload,
+            mode="context_file",
+            context_policy={"reuse_expected_calls": 1},
+        )
+
+        self.assertIn("CASE-123", result["optimized_text"])
+        self.assertIn("/srv/app/main.py:42", result["optimized_text"])
+        self.assertIn("INV-900", result["optimized_text"])
+        self.assertIn("2026-05-23", result["optimized_text"])
+        self.assertTrue(result["preservation"]["ok"])
+        self.assertTrue(result["warnings"])
+        self.assertEqual(result["context_file"]["reuse_expected_calls"], 1)
 
 
 if __name__ == "__main__":

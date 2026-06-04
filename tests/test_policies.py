@@ -21,6 +21,19 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(policy["system_prompt_ref"], "json_only")
         self.assertTrue(policy["cache_static_prefix"])
 
+    def test_context_policy_normalizes_context_file_options(self):
+        policy = normalize_context_policy(
+            {
+                "reuse_expected_calls": "25",
+                "include_decode_prompt": False,
+                "validation": "loose",
+            }
+        )
+
+        self.assertEqual(policy["reuse_expected_calls"], 25)
+        self.assertFalse(policy["include_decode_prompt"])
+        self.assertEqual(policy["validation"], "loose")
+
 
 class PromptRegistryTests(unittest.TestCase):
     def test_builtin_prompt_ref_expands_to_short_instruction(self):

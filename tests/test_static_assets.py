@@ -22,6 +22,19 @@ class StaticAssetTests(unittest.TestCase):
     def test_workbench_defaults_to_balanced_compile_mode(self):
         policy = (ROOT / "src" / "workbench" / "PolicyControls.jsx").read_text()
         self.assertIn('value="balanced"', policy)
+        self.assertIn('value="context_file"', policy)
+        self.assertIn('id="reuseExpectedCallsInput"', policy)
+        self.assertIn('className="advanced-control-group"', policy)
+        self.assertIn('id="contextAdvancedControls"', policy)
+        self.assertIn('id="toolsAdvancedControls"', policy)
+
+    def test_workbench_drawer_hides_secondary_tabs_behind_more_selector(self):
+        drawer_source = (ROOT / "src" / "components" / "Drawer.jsx").read_text()
+        shell_source = (ROOT / "src" / "workbench" / "WorkbenchShell.jsx").read_text()
+
+        self.assertIn("primary", shell_source)
+        self.assertIn("drawerMoreSelect", drawer_source)
+        self.assertIn("secondaryTabs", drawer_source)
 
     def test_workbench_exposes_prompt_optimization_workflow_selectors(self):
         source = "\n".join(
@@ -51,8 +64,12 @@ class StaticAssetTests(unittest.TestCase):
             "maxWordsInput",
             "explainToggle",
             "systemPromptRef",
+            "reuseExpectedCallsInput",
+            "includeDecodePromptInput",
+            "validationModeSelect",
             "retrievalTopKInput",
             "toolCompactInput",
+            "autoSemanticInput",
             "deterministicSemanticInput",
             "optimizedOutput",
             "optimizationReport",
@@ -65,6 +82,50 @@ class StaticAssetTests(unittest.TestCase):
             "traceLookupInput",
         ):
             self.assertIn(f'id="{selector_id}"', source)
+
+    def test_semantic_controls_are_visible_in_core_setup(self):
+        policy = (ROOT / "src" / "workbench" / "PolicyControls.jsx").read_text()
+        css = (ROOT / "src" / "styles" / "workbench.css").read_text()
+
+        self.assertIn('className="semantic-quick-controls"', policy)
+        self.assertIn('id="autoSemanticInput"', policy)
+        self.assertIn('id="deterministicSemanticInput"', policy)
+        self.assertIn(".semantic-quick-controls", css)
+
+    def test_optimized_output_has_own_scroll_region(self):
+        css = (ROOT / "src" / "styles" / "workbench.css").read_text()
+        output_source = (ROOT / "src" / "workbench" / "OutputPanel.jsx").read_text()
+
+        self.assertIn(".optimized-output-scroll", css)
+        self.assertIn("overflow: auto", css)
+        self.assertIn("overscroll-behavior: contain", css)
+        self.assertIn('id="optimizedOutput"', output_source)
+        self.assertIn('className="optimized-output-scroll"', output_source)
+
+    def test_workbench_exposes_trust_clarity_selectors(self):
+        source = "\n".join(
+            [
+                (ROOT / "src" / "workbench" / "OutputPanel.jsx").read_text(),
+                (ROOT / "src" / "workbench" / "AnalyticsPanel.jsx").read_text(),
+            ]
+        )
+        css = (ROOT / "src" / "styles" / "workbench.css").read_text()
+
+        for selector_id in (
+            "trustBadge",
+            "promptRecommendation",
+            "tokenAccountingPanel",
+            "trustExplanationRows",
+            "trustMetrics",
+        ):
+            self.assertIn(f'id="{selector_id}"', source)
+        for class_name in (
+            ".trust-badge",
+            ".token-accounting-panel",
+            ".prompt-recommendation-card",
+            ".trust-explanation-rows",
+        ):
+            self.assertIn(class_name, css)
 
     def test_python_server_defaults_to_documented_port_8765(self):
         server_source = (ROOT / "promptcompiler" / "fastapi_server.py").read_text()

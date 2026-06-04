@@ -22,7 +22,7 @@ It runs locally with deterministic Python logic by default. NVIDIA NIM integrati
 ## What It Does
 
 - Analyzes prompt structure, token estimates, roles, duplicate sections, and protected entities.
-- Compiles prompts in `lossless`, `balanced`, or `aggressive` modes via the v2 pass pipeline.
+- Compiles prompts in `lossless`, `balanced`, `aggressive`, or reusable `context_file` modes.
 - Preserves pinned instructions and critical values such as case IDs, names, amounts, and dates.
 - Shows optimized output, savings metrics, diffs, warnings, lint findings, semantic signals, and request traces.
 - Provides a React workbench UI plus JSON APIs for agents, scripts, and SDK-style integrations.

@@ -93,15 +93,24 @@ async function waitFor(cdp, expression, label, timeout = 20000) {
 }
 
 async function clickDrawerTab(cdp, label) {
-  await evalExpr(
+  const selected = await evalExpr(
     cdp,
     `(() => {
       const button = [...document.querySelectorAll('.drawer-tab')].find((item) => item.textContent.trim() === ${JSON.stringify(label)});
-      if (!button) return false;
-      button.click();
+      if (button) {
+        button.click();
+        return true;
+      }
+      const more = document.querySelector('#drawerMoreSelect');
+      if (!more) return false;
+      const option = [...more.options].find((item) => item.textContent.trim() === ${JSON.stringify(label)});
+      if (!option) return false;
+      more.value = option.value;
+      more.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     })()`,
   );
+  if (!selected) throw new Error(`Drawer panel not found: ${label}`);
 }
 
 async function setInputValue(cdp, selector, value, eventName = "input") {
@@ -342,9 +351,15 @@ try {
       '#modelSelect', '#sampleSelect', '#workflowPresetSelect', '#targetBudgetInput',
       '#dryRunInput', '#zeroRetentionInput', '#cacheEnabled', '#outputFormat',
       '#maxWordsInput', '#explainToggle', '#systemPromptRef', '#retrievalTopKInput',
-      '#toolCompactInput', '#deterministicSemanticInput', '#optimizedOutput',
-      '#optimizationReport', '#exportTextButton', '#exportJsonButton'
+      '#toolCompactInput', '#autoSemanticInput', '#deterministicSemanticInput',
+      '.optimized-output-scroll', '#optimizedOutput', '#optimizationReport',
+      '#exportTextButton', '#exportJsonButton'
     ].filter((selector) => !document.querySelector(selector)),
+    semanticControls: {
+      autoVisible: document.querySelector('#autoSemanticInput')?.getBoundingClientRect().height > 0,
+      forceVisible: document.querySelector('#deterministicSemanticInput')?.getBoundingClientRect().height > 0,
+      scrollRegion: Boolean(document.querySelector('.optimized-output-scroll'))
+    },
     primaryText: document.querySelector('#compileButton')?.textContent.trim(),
     outputTop: document.querySelector('#outputPanel')?.getBoundingClientRect().top,
     analyticsTop: document.querySelector('#analyticsPanel')?.getBoundingClientRect().top,
@@ -352,6 +367,9 @@ try {
     innerWidth: window.innerWidth
   }))())`));
   assert(boot.requiredSelectors.length === 0, `missing selectors: ${boot.requiredSelectors.join(", ")}`);
+  assert(boot.semanticControls.autoVisible, "auto semantic control is not visible");
+  assert(boot.semanticControls.forceVisible, "force semantic control is not visible");
+  assert(boot.semanticControls.scrollRegion, "optimized output scroll region missing");
   assert(boot.primaryText === "Compile & Optimize", "primary action label changed");
   assert(boot.outputTop < boot.analyticsTop, "optimized output must appear before analytics");
   assert(boot.scrollWidth <= boot.innerWidth, "desktop workbench overflowed horizontally");
@@ -377,6 +395,47 @@ try {
   assert(support.report.includes("Cache"), "route/cache status missing from report");
   assert(support.jsonDisabled === false, "JSON export did not enable after compile");
 
+  const longPrompt = Array.from(
+    { length: 140 },
+    (_, index) => `Unique requirement ${index + 1}: preserve detail-${index + 1} and explain it clearly.`,
+  ).join(" ");
+  await setInputValue(cdp, "#promptInput", longPrompt);
+  await setInputValue(cdp, "#targetBudgetInput", "");
+  await setInputValue(cdp, "#modeSelect", "balanced", "change");
+  await compileAndWait(cdp, "long unchanged prompt");
+  const scrollState = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => {
+    const el = document.querySelector('.optimized-output-scroll');
+    return {
+      scrollHeight: el?.scrollHeight || 0,
+      clientHeight: el?.clientHeight || 0,
+      overflowY: el ? getComputedStyle(el).overflowY : '',
+      insight: document.querySelector('#optimizationInsight')?.innerText || ''
+    };
+  })())`));
+  assert(scrollState.scrollHeight > scrollState.clientHeight, "optimized output does not have vertical overflow");
+  assert(scrollState.overflowY === "auto", "optimized output scroll region should use overflow auto");
+  assert(scrollState.insight.includes("No safe compression found"), "unchanged prompt insight did not render");
+
+  const creativePrompt = [
+    "Create a modern, professional, responsive portfolio website for a developer named Alex Rivera.",
+    "Include a hero section, about section, skills, featured projects, experience, testimonials, blog cards, and contact form.",
+    "Use elegant visual design, strong typography, responsive behavior, accessible buttons, subtle motion, SEO metadata, and polished placeholder copy.",
+  ].join("\n\n");
+  await setInputValue(cdp, "#promptInput", creativePrompt);
+  await compileAndWait(cdp, "creative portfolio prompt");
+  const trustState = JSON.parse(await evalExpr(cdp, `JSON.stringify((() => ({
+    badge: document.querySelector('#trustBadge')?.innerText || '',
+    recommendation: document.querySelector('#promptRecommendation')?.innerText || '',
+    accounting: document.querySelector('#tokenAccountingPanel')?.innerText || '',
+    rows: document.querySelector('#trustExplanationRows')?.innerText || '',
+    metrics: document.querySelector('#trustMetrics')?.innerText || ''
+  }))())`));
+  assert(trustState.badge.includes("No safe savings"), "trust badge did not explain low safe savings");
+  assert(trustState.recommendation.includes("Creative build prompt"), "prompt type recommendation missing");
+  assert(trustState.recommendation.includes("Distill"), "distillation recommendation missing");
+  assert(/Segmented|segmented/.test(trustState.accounting), "token accounting panel did not mention segmented counting");
+  assert(/distillation/i.test(trustState.rows), "trust explanation rows did not explain distillation");
+
   await clickDrawerTab(cdp, "History");
   await waitFor(cdp, `document.querySelectorAll('#historyList .history-card').length >= 1`, "history record");
 
@@ -389,7 +448,8 @@ try {
   await evalExpr(cdp, `document.querySelector('#loadSampleButton').click()`);
   await waitFor(cdp, `document.querySelector('#promptInput')?.value.includes('Source: doc-a')`, "rag sample load");
   await setInputValue(cdp, "#targetBudgetInput", "");
-  await setInputValue(cdp, "#deterministicSemanticInput", true);
+  await setInputValue(cdp, "#autoSemanticInput", true);
+  await setInputValue(cdp, "#deterministicSemanticInput", false);
   await compileAndWait(cdp, "RAG overlap");
   await clickDrawerTab(cdp, "RAG");
   await waitFor(cdp, `document.querySelector('#ragPruningTable')?.innerText.includes('doc-')`, "RAG pruning table");
@@ -449,6 +509,9 @@ try {
   const cacheReport = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);
   assert(cacheReport.includes("hit"), "cache-enabled repeated compile did not show a hit");
 
+  await setInputValue(cdp, "#cacheEnabled", false);
+  await setInputValue(cdp, "#zeroRetentionInput", false);
+  await compileAndWait(cdp, "zero retention off");
   await setInputValue(cdp, "#zeroRetentionInput", true);
   await compileAndWait(cdp, "zero retention");
   const zeroRetention = await evalExpr(cdp, `document.querySelector('#optimizationReport')?.innerText || ''`);

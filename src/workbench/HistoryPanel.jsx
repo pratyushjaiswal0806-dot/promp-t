@@ -54,6 +54,7 @@ export function HistoryPanel() {
                   <button type="button" onClick={() => rerunHistory(item, "lossless")}>Lossless</button>
                   <button type="button" onClick={() => rerunHistory(item, "balanced")}>Balanced</button>
                   <button type="button" onClick={() => rerunHistory(item, "aggressive")}>Aggressive</button>
+                  <button type="button" onClick={() => rerunHistory(item, "context_file")}>Reusable</button>
                   <button type="button" onClick={() => compareHistoryModes(item)}>Compare</button>
                   {traceId && <button type="button" onClick={() => handleTraceLookup(traceId)}>Trace</button>}
                 </div>

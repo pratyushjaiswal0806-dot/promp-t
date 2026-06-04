@@ -86,7 +86,7 @@ def _build_parser() -> argparse.ArgumentParser:
     compile_cmd = subcommands.add_parser("compile", help="Compile a prompt file")
     compile_cmd.add_argument("input", help="Path to a text or JSON prompt file")
     compile_cmd.add_argument("--model", default=DEFAULT_NIM_MODEL)
-    compile_cmd.add_argument("--mode", choices=["lossless", "balanced", "aggressive"], default="lossless")
+    compile_cmd.add_argument("--mode", choices=["lossless", "balanced", "aggressive", "context_file"], default="lossless")
     compile_cmd.add_argument("--target-token-budget", type=int, default=None, help="Target token budget for compression")
     compile_cmd.add_argument("--dry-run", action="store_true", help="Show compression plan without mutating")
     compile_cmd.add_argument("--smoke-test", action="store_true", help="Run smoke-test validation instead of normal compilation")

@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
+    "lint": "git diff --check",
     "preview": "vite preview --host 127.0.0.1",
+    "test": "npm run test:frontend",
     "test:frontend": "node --test tests/frontend_payload.test.mjs"
   },
   "dependencies": {

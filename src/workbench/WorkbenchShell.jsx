@@ -9,15 +9,15 @@ import { Drawer } from "../components/Drawer.jsx";
 import { StatusBar } from "../components/StatusBar.jsx";
 
 const DRAWER_TABS = [
-  { id: "metrics", label: "Metrics" },
+  { id: "metrics", label: "Metrics", primary: true },
   { id: "segments", label: "Segments" },
-  { id: "diff", label: "Diff" },
+  { id: "diff", label: "Diff", primary: true },
   { id: "rag", label: "RAG" },
   { id: "changes", label: "Changes" },
   { id: "lint", label: "Lint" },
   { id: "entities", label: "Entities" },
   { id: "semantic", label: "Semantic" },
-  { id: "history", label: "History" },
+  { id: "history", label: "History", primary: true },
 ];
 
 export function WorkbenchShell() {

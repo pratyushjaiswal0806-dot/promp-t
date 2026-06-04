@@ -58,6 +58,26 @@ class CliTests(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["mode"], "aggressive")
 
+    def test_cli_compile_accepts_context_file_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompt.txt"
+            path.write_text(
+                "You are a senior software engineer specializing in code review. "
+                "Do not preface your response with summaries of what you are about to do. "
+                "Always preserve file paths and line numbers exactly as the user wrote them.",
+                encoding="utf-8",
+            )
+            out = StringIO()
+
+            with redirect_stdout(out):
+                code = run_cli(["compile", str(path), "--mode", "context_file"])
+
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload["mode"], "context_file")
+        self.assertIn("context_file", payload)
+        self.assertIn("do not preface response with summary of planned review", payload["optimized_text"])
+
     def test_cli_compile_with_target_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "prompt.txt"

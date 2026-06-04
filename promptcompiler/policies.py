@@ -6,6 +6,7 @@ from typing import Any
 
 
 _ALLOWED_OUTPUT_FORMATS = {"plain", "json", "bullets"}
+_ALLOWED_CONTEXT_VALIDATION = {"strict", "loose"}
 
 
 def normalize_output_policy(value: Any) -> dict[str, Any]:
@@ -34,12 +35,18 @@ def normalize_output_policy(value: Any) -> dict[str, Any]:
 
 def normalize_context_policy(value: Any) -> dict[str, Any]:
     raw = value if isinstance(value, dict) else {}
+    validation = str(raw.get("validation") or "strict").strip().lower()
+    if validation not in _ALLOWED_CONTEXT_VALIDATION:
+        validation = "strict"
     return {
         "system_prompt_ref": _optional_string(raw.get("system_prompt_ref")),
         "cache_static_prefix": bool(raw.get("cache_static_prefix", False)),
         "sliding_window_turns": _positive_int(raw.get("sliding_window_turns"), default=None),
         "summary_token_budget": _positive_int(raw.get("summary_token_budget"), default=None),
         "retrieval_top_k": _positive_int(raw.get("retrieval_top_k"), default=None),
+        "reuse_expected_calls": _positive_int(raw.get("reuse_expected_calls"), default=1),
+        "include_decode_prompt": bool(raw.get("include_decode_prompt", True)),
+        "validation": validation,
     }
 
 

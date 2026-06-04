@@ -109,6 +109,11 @@ class V1ApiTests(unittest.TestCase):
         self.assertTrue(payload["optimized_messages"])
         self.assertEqual(payload["optimized_messages"][0]["role"], "system")
         self.assertIn("CASE-123", payload["optimized_messages"][0]["content"])
+        self.assertIn("token_accounting", payload)
+        self.assertEqual(payload["token_accounting"]["method"], "segmented_prompt_estimate")
+        self.assertEqual(payload["token_accounting"]["original_tokens"], payload["original_token_count"])
+        self.assertEqual(payload["token_accounting"]["optimized_tokens"], payload["optimized_token_count"])
+        self.assertIn("optimized_reuse_tokens", payload["token_accounting"])
         self.assertTrue(
             any(item["type"] == "rag_prune" for item in payload["transformations"])
         )
@@ -154,6 +159,47 @@ class V1ApiTests(unittest.TestCase):
         self.assertNotIn("policy-b", payload["optimized_prompt"])
         self.assertTrue(
             any(item["type"] == "rag_prune" for item in payload["transformations"])
+        )
+
+    def test_v1_compile_accepts_context_file_mode_and_returns_reuse_metrics(self):
+        status, response = post_v1(
+            "/v1/compile",
+            {
+                "provider": "openai",
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a senior software engineer specializing in code review. "
+                            "First, identify bugs and security issues with exact lines. "
+                            "Second, point out meaningful readability issues. "
+                            "Third, suggest concrete improvements with example code. "
+                            "Do not preface your response with summaries of what you are about to do. "
+                            "Always preserve file paths and line numbers exactly as the user wrote them."
+                        ),
+                    }
+                ],
+                "mode": "context_file",
+                "context_policy": {
+                    "reuse_expected_calls": 50,
+                    "include_decode_prompt": True,
+                    "validation": "strict",
+                },
+            },
+        )
+
+        payload = json.loads(response)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["mode"], "context_file")
+        self.assertIn("context_file", payload)
+        self.assertEqual(payload["context_file"]["reuse_expected_calls"], 50)
+        self.assertIn("decode_prompt", payload["context_file"])
+        self.assertGreater(payload["context_file"]["net_reuse_savings_per_call"], 0)
+        self.assertTrue(payload["context_file"]["preservation"]["negations_preserved"])
+        self.assertIn("do not preface response with summary of planned review", payload["optimized_prompt"])
+        self.assertTrue(
+            any(item["type"] == "context_file_compact" for item in payload["transformations"])
         )
 
     def test_v1_compile_rejects_invalid_messages_shape(self):

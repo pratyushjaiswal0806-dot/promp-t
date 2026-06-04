@@ -140,6 +140,7 @@ def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
         target_token_budget=request.target_token_budget,
         dry_run=request.dry_run,
         semantic_policy=request.semantic_policy,
+        context_policy=request.context_policy,
         use_cache=bool(cache_key),
     )
     before_cost = _estimated_cost(result["original_tokens"])
@@ -158,6 +159,7 @@ def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
         "dry_run": result["dry_run"],
         "original_token_count": result["original_tokens"],
         "optimized_token_count": result["optimized_tokens"],
+        "token_accounting": result.get("token_accounting", {}),
         "token_reduction_percent": _percent_reduction(
             result["original_tokens"],
             result["optimized_tokens"],
@@ -192,6 +194,8 @@ def compile_v1(payload: dict[str, Any]) -> dict[str, Any]:
         "preservation": result["preservation"],
         "compile": result,
     }
+    if "context_file" in result:
+        response["context_file"] = result["context_file"]
     if cache_key:
         get_store().set_compile_cache(cache_key, response)
     _record_trace(
@@ -315,7 +319,7 @@ def session_context_v1(session_id: str, filters: dict[str, str]) -> dict[str, An
     }
 
 
-_ALLOWED_MODES = {"lossless", "balanced", "aggressive"}
+_ALLOWED_MODES = {"lossless", "balanced", "aggressive", "context_file"}
 
 
 def normalize_v1_request(payload: dict[str, Any]) -> NormalizedV1Request:
@@ -328,16 +332,18 @@ def normalize_v1_request(payload: dict[str, Any]) -> NormalizedV1Request:
     semantic_policy = normalize_semantic_policy(payload.get("semantic_policy"))
     tool_policy = payload.get("tool_policy") if isinstance(payload.get("tool_policy"), dict) else {}
     cache_policy = payload.get("cache_policy") if isinstance(payload.get("cache_policy"), dict) else {}
-    raw_input, payload_kind, messages = _raw_input_from_payload(payload, tool_policy=tool_policy)
-    raw_input = _apply_prompt_policies(raw_input, context_policy, output_policy)
 
     mode = str(payload.get("mode") or "lossless").strip().lower()
     if mode not in _ALLOWED_MODES:
         raise ValueError(
-            f"Unsupported compression mode '{mode}'. Choose lossless, balanced, or aggressive."
+            f"Unsupported compression mode '{mode}'. Choose lossless, balanced, aggressive, or context_file."
         )
 
     target_token_budget = _target_budget(payload.get("target_token_budget"))
+    raw_input, payload_kind, messages = _raw_input_from_payload(payload, tool_policy=tool_policy)
+    if mode == "context_file" and messages:
+        raw_input = "\n\n".join(message["content"] for message in messages if message.get("content"))
+    raw_input = _apply_prompt_policies(raw_input, context_policy, output_policy)
 
     return NormalizedV1Request(
         trace_id=str(payload.get("trace_id") or f"tr_{uuid4().hex}"),
@@ -555,6 +561,13 @@ def _optimized_messages(
     result: dict[str, Any],
     request: NormalizedV1Request,
 ) -> list[dict[str, str]]:
+    context_file = result.get("context_file")
+    if isinstance(context_file, dict):
+        compact = str(context_file.get("compact") or result.get("optimized_text") or "")
+        decode_prompt = str(context_file.get("decode_prompt") or "").strip()
+        content = f"{decode_prompt}\n\n[compact context]\n{compact}".strip() if decode_prompt else compact
+        return [{"role": "system", "content": content}]
+
     messages: list[dict[str, str]] = []
     for item in result["diff"]:
         if item.get("status") == "removed":

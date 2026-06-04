@@ -11,6 +11,7 @@ import json
 import re
 from typing import Any
 
+from .context_compression import compile_context_file
 from .diff import kept_diff, removed_diff
 from .entities import extract_entities
 from .models import DEFAULT_NIM_MODEL
@@ -24,7 +25,7 @@ _COMPILE_CACHE: dict[str, dict[str, Any]] = {}
 _COMPILE_CACHE_MAX = 128
 
 
-_ALLOWED_MODES = {"lossless", "balanced", "aggressive"}
+_ALLOWED_MODES = {"lossless", "balanced", "aggressive", "context_file"}
 _PINNED_BUDGET_RATIO = 0.25
 
 
@@ -54,13 +55,18 @@ def compile_prompt(
     target_token_budget: int | None = None,
     dry_run: bool = False,
     semantic_policy: dict[str, Any] | None = None,
+    context_policy: dict[str, Any] | None = None,
     use_cache: bool = False,
 ) -> dict[str, Any]:
     normalized_mode = _validate_mode(mode)
     normalized_budget = _normalize_budget(target_token_budget)
     set_active_model(model)
 
-    cache_key = _compile_cache_key(raw_input, model, normalized_mode, normalized_budget, dry_run) if use_cache else None
+    cache_key = (
+        _compile_cache_key(raw_input, model, normalized_mode, normalized_budget, dry_run, context_policy)
+        if use_cache
+        else None
+    )
     if cache_key and cache_key in _COMPILE_CACHE:
         cached = dict(_COMPILE_CACHE[cache_key])
         cached["cache_status"] = "hit"
@@ -70,15 +76,23 @@ def compile_prompt(
     original_tokens = sum(segment.tokens for segment in original_segments)
     _enforce_pinned_budget(original_segments, normalized_budget, original_tokens)
 
-    proposed = _build_compile(
-        original_segments,
-        raw_input,
-        model=model,
-        mode=normalized_mode,
-        target_token_budget=normalized_budget,
-        semantic_policy=semantic_policy,
-        original_tokens=original_tokens,
-    )
+    if normalized_mode == "context_file":
+        proposed = compile_context_file(
+            raw_input,
+            original_segments,
+            original_tokens=original_tokens,
+            context_policy=context_policy,
+        )
+    else:
+        proposed = _build_compile(
+            original_segments,
+            raw_input,
+            model=model,
+            mode=normalized_mode,
+            target_token_budget=normalized_budget,
+            semantic_policy=semantic_policy,
+            original_tokens=original_tokens,
+        )
 
     if dry_run:
         active_optimized_text = raw_input
@@ -92,6 +106,13 @@ def compile_prompt(
         active_optimized_tokens = proposed["optimized_tokens"]
         active_tokens_saved = proposed["tokens_saved"]
 
+    token_accounting = _token_accounting(
+        raw_input,
+        active_optimized_text,
+        original_tokens,
+        active_optimized_tokens,
+    )
+
     result = {
         "model": model,
         "mode": normalized_mode,
@@ -101,6 +122,7 @@ def compile_prompt(
         "optimized_tokens": active_optimized_tokens,
         "tokens_saved": active_tokens_saved,
         "savings_ratio": round(active_tokens_saved / original_tokens, 4) if original_tokens else 0,
+        "token_accounting": token_accounting,
         "optimized_text": active_optimized_text,
         "proposed_optimized_text": proposed["optimized_text"],
         "proposed_optimized_tokens": proposed["optimized_tokens"],
@@ -120,6 +142,8 @@ def compile_prompt(
         "cache_status": "miss" if cache_key else "bypass",
         "cost_benefit": _cost_benefit(original_tokens, proposed["tokens_saved"], normalized_mode),
     }
+    if "context_file" in proposed:
+        result["context_file"] = proposed["context_file"]
 
     if cache_key and not dry_run:
         if len(_COMPILE_CACHE) >= _COMPILE_CACHE_MAX:
@@ -477,7 +501,7 @@ def _validate_mode(mode: str) -> str:
     normalized = (mode or "lossless").strip().lower()
     if normalized not in _ALLOWED_MODES:
         raise CompilePolicyError(
-            f"Unsupported compression mode '{mode}'. Choose lossless, balanced, or aggressive.",
+            f"Unsupported compression mode '{mode}'. Choose lossless, balanced, aggressive, or context_file.",
             status_code=400,
             error_code="INVALID_COMPRESSION_MODE",
             details={"allowed_modes": sorted(_ALLOWED_MODES)},
@@ -533,6 +557,12 @@ def _enforce_pinned_budget(
 
 
 def _cost_benefit(original_tokens: int, tokens_saved: int, mode: str) -> dict[str, Any]:
+    if mode == "context_file":
+        return {
+            "estimated_input_tokens_saved": tokens_saved,
+            "summarization_cost_proxy_tokens": 0,
+            "should_use_active_summarization": False,
+        }
     summarization_cost_proxy = 0 if mode == "lossless" else round(original_tokens * 0.2)
     should_summarize = mode != "lossless" and tokens_saved > summarization_cost_proxy * 1.5
     return {
@@ -549,12 +579,46 @@ def _token_metrics_for_output(
 ) -> tuple[int, int]:
     if optimized_text == raw_input:
         return original_tokens, 0
-    optimized_tokens = estimate_text_tokens(optimized_text)
+    optimized_tokens = _segmented_token_count(optimized_text)
     return optimized_tokens, max(0, original_tokens - optimized_tokens)
 
 
+def _segmented_token_count(text: str) -> int:
+    return sum(segment.tokens for segment in parse_prompt(text))
+
+
+def _token_accounting(
+    raw_input: str,
+    optimized_text: str,
+    original_tokens: int,
+    optimized_tokens: int,
+) -> dict[str, Any]:
+    original_segments = parse_prompt(raw_input)
+    optimized_segments = parse_prompt(optimized_text)
+    original_raw_tokens = estimate_text_tokens(raw_input)
+    optimized_raw_tokens = estimate_text_tokens(optimized_text)
+    optimized_reuse_tokens = sum(segment.tokens for segment in optimized_segments)
+    return {
+        "method": "segmented_prompt_estimate",
+        "tokenizer": "estimated",
+        "original_tokens": original_tokens,
+        "optimized_tokens": optimized_tokens,
+        "optimized_reuse_tokens": optimized_reuse_tokens,
+        "original_raw_text_tokens": original_raw_tokens,
+        "optimized_raw_text_tokens": optimized_raw_tokens,
+        "original_segments": len(original_segments),
+        "optimized_segments": len(optimized_segments),
+        "segment_overhead_tokens": max(0, original_tokens - original_raw_tokens),
+        "optimized_segment_overhead_tokens": max(0, optimized_reuse_tokens - optimized_raw_tokens),
+        "note": (
+            "Counts use segmented prompt estimates so optimized output is measured "
+            "the same way when reused as input."
+        ),
+    }
+
+
 def _risk_score(mode: str, warnings: list[str], missing_entities: bool) -> float:
-    base = {"lossless": 0.05, "balanced": 0.28, "aggressive": 0.58}[mode]
+    base = {"lossless": 0.05, "balanced": 0.28, "aggressive": 0.58, "context_file": 0.18}[mode]
     if warnings:
         base += 0.15
     if missing_entities:
@@ -580,6 +644,7 @@ def _compile_cache_key(
     mode: str,
     target_token_budget: int | None,
     dry_run: bool,
+    context_policy: dict[str, Any] | None = None,
 ) -> str | None:
     payload = {
         "raw_input": raw_input,
@@ -587,6 +652,7 @@ def _compile_cache_key(
         "mode": mode,
         "target_token_budget": target_token_budget,
         "dry_run": dry_run,
+        "context_policy": context_policy or {},
     }
     encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:32]

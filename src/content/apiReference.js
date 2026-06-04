@@ -14,7 +14,7 @@ export const apiReference = {
     },
     {
       method: "POST", path: "/v1/compile", description: "Compile a prompt with policy controls.",
-      requestSchema: '{\n  "input": "string (required)",\n  "model": "string",\n  "mode": "lossless | balanced | aggressive",\n  "target_token_budget": "number | null",\n  "dry_run": "boolean"\n}',
+      requestSchema: '{\n  "input": "string (required)",\n  "model": "string",\n  "mode": "lossless | balanced | aggressive | context_file",\n  "target_token_budget": "number | null",\n  "dry_run": "boolean"\n}',
       responseSchema: '{\n  "optimized_prompt": "string",\n  "original_token_count": "number",\n  "optimized_token_count": "number",\n  "token_reduction_percent": "number",\n  "diff": "DiffItem[]",\n  "warnings": "string[]"\n}',
       example: 'curl -X POST http://127.0.0.1:8765/v1/compile -H \'Content-Type: application/json\' -d \'{"input":"...","mode":"balanced"}\'',
       statusCodes: [{ code: 200, description: "Compilation complete" }, { code: 400, description: "Invalid input" }, { code: 422, description: "Validation error" }],

@@ -6,7 +6,14 @@ export function OutputPanel() {
   return (
     <>
       <UsabilityVerdict verdict={report?.verdict} />
-      <pre id="optimizedOutput" className="optimized-output-text">{optimizedOutput}</pre>
+      <TrustBadge profile={report?.trustProfile} />
+      <OptimizationInsight insight={report?.insight} />
+      <PromptRecommendation profile={report?.trustProfile} />
+      <TokenAccountingPanel accounting={report?.trustProfile?.accounting} />
+      <div className="optimized-output-scroll" aria-label="Scrollable optimized prompt">
+        <pre id="optimizedOutput" className="optimized-output-text">{optimizedOutput}</pre>
+      </div>
+      <TrustExplanationRows rows={report?.trustProfile?.explanationRows} />
       <ProposedPromptPanel prompt={report?.proposedPrompt} />
       <div className="action-bar output-action-bar">
         <button className="btn btn-sm" type="button" disabled={!canExport} onClick={handleCopy}>
@@ -24,12 +31,88 @@ export function OutputPanel() {
   );
 }
 
+function TrustBadge({ profile }) {
+  if (!profile) return null;
+  return (
+    <section id="trustBadge" className={`trust-badge trust-${profile.confidence?.tone || "unknown"}`}>
+      <div>
+        <span>Trust</span>
+        <strong>{profile.confidence?.label || "Unknown"}</strong>
+      </div>
+      <p>{profile.confidence?.reason || "Run compile to verify this output."}</p>
+    </section>
+  );
+}
+
 function UsabilityVerdict({ verdict }) {
   if (!verdict) return null;
   return (
     <section id="usabilityVerdict" className={`usability-verdict verdict-${verdict.status || "unknown"}`}>
       <strong>{verdict.label}</strong>
       <span>{verdict.reason}</span>
+    </section>
+  );
+}
+
+function OptimizationInsight({ insight }) {
+  if (!insight) return null;
+  return (
+    <section id="optimizationInsight" className={`optimization-insight insight-${insight.status || "info"}`}>
+      <strong>{insight.title}</strong>
+      <span>{insight.body}</span>
+    </section>
+  );
+}
+
+function PromptRecommendation({ profile }) {
+  if (!profile) return null;
+  return (
+    <section id="promptRecommendation" className="prompt-recommendation-card">
+      <div>
+        <span>Prompt type</span>
+        <strong>{profile.promptType}</strong>
+      </div>
+      <div>
+        <span>Best optimization</span>
+        <strong>{profile.bestOptimization}</strong>
+      </div>
+      <div>
+        <span>Safe compression</span>
+        <strong>{profile.safeCompressionPotential}</strong>
+      </div>
+    </section>
+  );
+}
+
+function TokenAccountingPanel({ accounting }) {
+  if (!accounting) return null;
+  return (
+    <section id="tokenAccountingPanel" className="token-accounting-panel">
+      <div className="token-accounting-heading">
+        <strong>{accounting.label}</strong>
+        <span>{accounting.method}</span>
+      </div>
+      <div className="token-accounting-grid">
+        <span>Original <strong>{displayToken(accounting.originalTokens)}</strong></span>
+        <span>Optimized <strong>{displayToken(accounting.optimizedTokens)}</strong></span>
+        <span>Pasted back <strong>{displayToken(accounting.optimizedReuseTokens)}</strong></span>
+        <span>Section overhead <strong>{displayToken(accounting.segmentOverheadTokens)}</strong></span>
+      </div>
+      <p>{accounting.note}</p>
+    </section>
+  );
+}
+
+function TrustExplanationRows({ rows }) {
+  if (!rows?.length) return null;
+  return (
+    <section id="trustExplanationRows" className="trust-explanation-rows">
+      {rows.map((row) => (
+        <div key={row.label} className="trust-explanation-row">
+          <span>{row.label}</span>
+          <p>{row.body}</p>
+        </div>
+      ))}
     </section>
   );
 }
@@ -45,6 +128,10 @@ function ProposedPromptPanel({ prompt }) {
       <pre>{prompt}</pre>
     </section>
   );
+}
+
+function displayToken(value) {
+  return value === null || value === undefined ? "-" : `${value}t`;
 }
 
 function OptimizationReport({ report }) {
