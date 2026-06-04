@@ -1,0 +1,262 @@
+{
+  "by_mode": {
+    "lossless": {
+      "runs": 62,
+      "avg_reduction": 10.17,
+      "median_reduction": 9.5,
+      "avg_similarity": 0.93,
+      "preservation_rate": 100.0,
+      "avg_risk": 0.05,
+      "avg_score": 69.04,
+      "widely_different": 0
+    },
+    "balanced": {
+      "runs": 62,
+      "avg_reduction": 10.2,
+      "median_reduction": 9.5,
+      "avg_similarity": 0.93,
+      "preservation_rate": 100.0,
+      "avg_risk": 0.28,
+      "avg_score": 66.7,
+      "widely_different": 0
+    },
+    "aggressive": {
+      "runs": 62,
+      "avg_reduction": 10.81,
+      "median_reduction": 9.79,
+      "avg_similarity": 0.92,
+      "preservation_rate": 100.0,
+      "avg_risk": 0.61,
+      "avg_score": 63.7,
+      "widely_different": 0
+    }
+  },
+  "by_category": {
+    "API Design": {
+      "runs": 6,
+      "avg_reduction": 14.87,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Academic": {
+      "runs": 6,
+      "avg_reduction": 12.07,
+      "avg_similarity": 0.9,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Code Generation": {
+      "runs": 9,
+      "avg_reduction": 19.25,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Creative Writing": {
+      "runs": 6,
+      "avg_reduction": 13.18,
+      "avg_similarity": 0.92,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Data Analysis": {
+      "runs": 6,
+      "avg_reduction": 5.36,
+      "avg_similarity": 0.95,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Design": {
+      "runs": 6,
+      "avg_reduction": 10.66,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Ecommerce": {
+      "runs": 6,
+      "avg_reduction": 10.0,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Education": {
+      "runs": 6,
+      "avg_reduction": 16.01,
+      "avg_similarity": 0.92,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Email": {
+      "runs": 6,
+      "avg_reduction": 10.95,
+      "avg_similarity": 0.9,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Error Paste": {
+      "runs": 9,
+      "avg_reduction": 11.8,
+      "avg_similarity": 0.95,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Finance": {
+      "runs": 6,
+      "avg_reduction": 12.6,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "HR": {
+      "runs": 6,
+      "avg_reduction": 12.98,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Legal Policy": {
+      "runs": 6,
+      "avg_reduction": 9.47,
+      "avg_similarity": 0.96,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Localization": {
+      "runs": 6,
+      "avg_reduction": 3.38,
+      "avg_similarity": 0.95,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Long Chat": {
+      "runs": 6,
+      "avg_reduction": 15.12,
+      "avg_similarity": 0.95,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Marketing": {
+      "runs": 6,
+      "avg_reduction": 8.86,
+      "avg_similarity": 0.96,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Medical Style": {
+      "runs": 3,
+      "avg_reduction": 9.59,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Observability": {
+      "runs": 6,
+      "avg_reduction": 4.26,
+      "avg_similarity": 0.9,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Operations": {
+      "runs": 6,
+      "avg_reduction": 3.28,
+      "avg_similarity": 0.95,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Product": {
+      "runs": 6,
+      "avg_reduction": 13.97,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Prompt Injection": {
+      "runs": 6,
+      "avg_reduction": 11.97,
+      "avg_similarity": 0.92,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Public Sector": {
+      "runs": 6,
+      "avg_reduction": 6.41,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "RAG Support": {
+      "runs": 6,
+      "avg_reduction": 3.06,
+      "avg_similarity": 1.0,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Sales": {
+      "runs": 6,
+      "avg_reduction": 6.45,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Science": {
+      "runs": 6,
+      "avg_reduction": 11.9,
+      "avg_similarity": 0.9,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Security": {
+      "runs": 6,
+      "avg_reduction": 10.01,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Strategy": {
+      "runs": 6,
+      "avg_reduction": 6.55,
+      "avg_similarity": 0.91,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Structured Data": {
+      "runs": 6,
+      "avg_reduction": 0.0,
+      "avg_similarity": 1.0,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Travel": {
+      "runs": 6,
+      "avg_reduction": 13.04,
+      "avg_similarity": 0.86,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    },
+    "Website Creation": {
+      "runs": 9,
+      "avg_reduction": 16.23,
+      "avg_similarity": 0.96,
+      "preservation_rate": 100.0,
+      "best_mode": "lossless"
+    }
+  },
+  "by_audience": {
+    "developer": {
+      "runs": 96,
+      "avg_reduction": 10.74,
+      "avg_similarity": 0.93,
+      "widely_different": 0,
+      "preservation_rate": 100.0
+    },
+    "non_developer": {
+      "runs": 90,
+      "avg_reduction": 10.02,
+      "avg_similarity": 0.93,
+      "widely_different": 0,
+      "preservation_rate": 100.0
+    }
+  }
+}
