@@ -98,7 +98,7 @@ export function WorkbenchShell() {
           </div>
 
           <div id="analyticsPanel">
-            <Drawer tabs={DRAWER_TABS} defaultHeight={260}>
+            <Drawer tabs={DRAWER_TABS} defaultHeight={190}>
               <div tabId="metrics"><AnalyticsPanel /></div>
               <div tabId="segments"><SegmentHeatmap segments={segments} /></div>
               <div tabId="diff"><DiffComparison diffItems={diffItems} /></div>
