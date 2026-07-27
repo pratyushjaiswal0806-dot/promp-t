@@ -1,7 +1,5 @@
-import { PageFrame, SectionBlock, pageActions } from "../components/PremiumPageLayout.jsx";
+import { PageFrame, SectionBlock, CodeExample, pageActions } from "../components/PremiumPageLayout.jsx";
 import { SidebarNav } from "../components/SidebarNav.jsx";
-import { CodeSnippet } from "../components/CodeSnippet.jsx";
-import { CodeExample } from "../components/PremiumPageLayout.jsx";
 import { docs } from "../content/docs.js";
 
 const sections = docs.sections.map((s) => ({ id: s.title.toLowerCase().replace(/\s+/g, "-"), title: s.title }));

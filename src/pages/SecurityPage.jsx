@@ -1,6 +1,5 @@
 import { PageFrame, SectionBlock, pageActions, FeatureGrid } from "../components/PremiumPageLayout.jsx";
 import { ComparisonTable } from "../components/ComparisonTable.jsx";
-import { FadeIn } from "../components/ui/FadeIn.jsx";
 import { security } from "../content/security.js";
 
 export default function SecurityPage({ onNavigate }) {

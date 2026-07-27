@@ -238,7 +238,7 @@ export const motionStats = [
   { value: "4", label: "Pipeline stages", detail: "parse, protect, compile, measure" },
   { value: "4", label: "Compile modes", detail: "lossless, balanced, aggressive, context_file" },
   { value: "0", label: "Default retention", detail: "raw payloads stay out of stored traces" },
-  { value: "1", label: "Local workbench", detail: "controls, diffs, analytics, history" },
+  { value: "4", label: "Local workbench", detail: "controls, diffs, analytics, history" },
 ];
 
 export const pageMeta = {

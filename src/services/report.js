@@ -49,7 +49,7 @@ export function deriveUsabilityVerdict(result = {}) {
 
 export function proposedPromptForDryRun(result = {}) {
   const compile = result.compile || result || {};
-  if (!Boolean(result.dry_run || compile.dry_run)) return "";
+  if (!(result.dry_run || compile.dry_run)) return "";
   const proposed = result.proposed_optimized_prompt || compile.proposed_optimized_text || "";
   const active = result.optimized_prompt || compile.optimized_text || "";
   return proposed && proposed !== active ? proposed : "";
@@ -152,7 +152,7 @@ function classifyPromptType(inputValue, compile) {
   if (/\b(error|traceback|exception|stderr|tool log|http [45]\d\d)\b/i.test(inputValue)) {
     return "Tool/log prompt";
   }
-  if (/^\s*[\[{]/.test(inputValue) && /["']?(messages|tools|schema|properties)["']?\s*:/i.test(inputValue)) {
+  if (/^\s*[[{]/.test(inputValue) && /["']?(messages|tools|schema|properties)["']?\s*:/i.test(inputValue)) {
     return "JSON/schema prompt";
   }
   if (

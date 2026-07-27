@@ -105,7 +105,8 @@ export function WorkbenchProvider({ children }) {
 
   const runAction = useCallback(async (name, fn) => {
     setWorkingAction(name);
-    try { await fn(); } catch (e) { showError(e.message); }
+    try { await fn(); }
+    catch (e) { showError(e && e.message ? String(e.message) : String(e)); }
     finally { setWorkingAction((c) => (c === name ? "" : c)); }
   }, [showError]);
 
@@ -117,7 +118,7 @@ export function WorkbenchProvider({ children }) {
     setWorkflowPresetId(presetId);
     const next = controlsFromPreset(presetId, controls);
     if (next.mode) setMode(next.mode);
-    const { mode: _presetMode, ...controlValues } = next;
+    const { mode: _, ...controlValues } = next;
     setControls(controlValues);
   }, [controls]);
 
@@ -156,8 +157,8 @@ export function WorkbenchProvider({ children }) {
     setMetrics(metricRows);
     setBreakdown(Object.entries(_diffBreakdown(nextDiff)));
     setEntities(result.preservation?.checked_entities || c.preservation?.checked_entities || []);
-    setChanges(_buildChanges(c, result));
-    setDiffItems(nextDiff);
+    setChanges(_buildChanges(c, result).slice(0, 200));
+    setDiffItems(nextDiff.slice(0, 200));
     setSegments(_segmentsFromCompile(nextDiff, result.analysis?.segments || []));
     setSemantic(nextSemantic);
     setRagRows(_ragRows(nextSemantic));
@@ -180,10 +181,18 @@ export function WorkbenchProvider({ children }) {
       controls: compileControls,
     });
     const result = await compile(payload);
-    const summary = applyCompileResult(result, prompt, compileMode, model, compileControls);
-    const l = await lint(prompt);
-    setLintFindings(l.findings || []);
-    if (saveHistory) {
+    let summary;
+    try {
+      summary = applyCompileResult(result, prompt, compileMode, model, compileControls);
+    } catch (err) {
+      showError(`Failed to process compile result: ${err && err.message ? err.message : String(err)}`);
+      return result;
+    }
+    try {
+      const l = await lint(prompt);
+      setLintFindings(l.findings || []);
+    } catch { /* lint failures are non-critical */ }
+    if (saveHistory && !compileControls.zeroRetention) {
       const item = {
         id: String(Date.now()),
         model,
@@ -194,10 +203,10 @@ export function WorkbenchProvider({ children }) {
         summary,
         savedAt: new Date().toISOString(),
       };
-      setHistory(saveToHistory(item));
+      setHistory(saveToHistory(item, compileControls.zeroRetention));
     }
     return result;
-  }, [applyCompileResult, controls, inputValue, mode, selectedModel]);
+  }, [applyCompileResult, controls, inputValue, mode, selectedModel, showError]);
 
   // Actions
   const handleAnalyze = useCallback(async () => {

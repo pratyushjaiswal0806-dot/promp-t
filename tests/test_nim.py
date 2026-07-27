@@ -23,7 +23,7 @@ class NimClientTests(unittest.TestCase):
                 "NVIDIA_API_KEY=folder-test-key\nNVIDIA_NIM_BASE_URL=https://example.test/v1\n",
                 encoding="utf-8",
             )
-            with patch.dict(os.environ, {}, clear=True):
+            with patch.dict(os.environ, {"PROMPTCOMPILER_NIM_UNSAFE_URL": "1"}, clear=True):
                 client = NimClient.from_env()
         finally:
             if original is None:

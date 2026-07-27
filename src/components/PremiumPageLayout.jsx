@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { FadeIn } from "./ui/FadeIn.jsx";
 import { RevealStagger } from "./ui/RevealStagger.jsx";

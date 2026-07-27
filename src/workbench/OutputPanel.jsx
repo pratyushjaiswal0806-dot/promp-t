@@ -1,14 +1,19 @@
 import { useWorkbench } from "./context/CompilerContext.jsx";
 
+export const DISPLAY_MAXChars = 50000;
+
 export function OutputPanel() {
   const { optimizedOutput, handleCopy, handleExportTxt, handleExportJson, canExport, lastCompile, report } = useWorkbench();
   const hasPromptRecommendation = Boolean(report?.trustProfile);
   const hasTokenAccounting = Boolean(report?.trustProfile?.accounting);
+  const displayText = optimizedOutput && optimizedOutput.length > DISPLAY_MAXChars
+    ? optimizedOutput.slice(0, DISPLAY_MAXChars) + "\n... (output truncated — export for full text)"
+    : optimizedOutput;
 
   return (
     <>
       <div className="optimized-output-scroll" aria-label="Scrollable optimized prompt">
-        <pre id="optimizedOutput" className="optimized-output-text">{optimizedOutput}</pre>
+        <pre id="optimizedOutput" className="optimized-output-text">{displayText}</pre>
       </div>
       <div className="action-bar output-action-bar">
         <button className="btn btn-sm" type="button" disabled={!canExport} onClick={handleCopy}>
@@ -126,26 +131,6 @@ function TrustBadge({ profile, id = "trustBadge" }) {
         <strong>{profile.confidence?.label || "Unknown"}</strong>
       </div>
       <p>{profile.confidence?.reason || "Run compile to verify this output."}</p>
-    </section>
-  );
-}
-
-function UsabilityVerdict({ verdict }) {
-  if (!verdict) return null;
-  return (
-    <section id="usabilityVerdict" className={`usability-verdict verdict-${verdict.status || "unknown"}`}>
-      <strong>{verdict.label}</strong>
-      <span>{verdict.reason}</span>
-    </section>
-  );
-}
-
-function OptimizationInsight({ insight }) {
-  if (!insight) return null;
-  return (
-    <section id="optimizationInsight" className={`optimization-insight insight-${insight.status || "info"}`}>
-      <strong>{insight.title}</strong>
-      <span>{insight.body}</span>
     </section>
   );
 }

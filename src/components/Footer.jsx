@@ -1,5 +1,3 @@
-import { navItems } from "../content/navigation.js";
-
 export function Footer({ onNavigate }) {
   return (
     <footer className="footer" style={{ padding: "2rem 1.5rem 1.25rem", textAlign: "left", maxWidth: "1120px", margin: "0 auto", width: "100%", borderTop: "2px solid var(--text)" }}>

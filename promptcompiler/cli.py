@@ -23,6 +23,9 @@ def run_cli(argv: list[str] | None = None) -> int:
         print(json.dumps({"default_model": DEFAULT_NIM_MODEL, "models": list_models()}, indent=2))
         return 0
 
+    if args.command == "verify":
+        return _run_verify()
+
     if args.command == "serve":
         _start_server(args.host, args.port)
         return 0
@@ -102,7 +105,112 @@ def _build_parser() -> argparse.ArgumentParser:
     retrieve_cmd.add_argument("--max-tokens", type=int, default=1200)
 
     subcommands.add_parser("models", help="List configured model ids")
+    verify = subcommands.add_parser("verify", help="Run self-verification: health check, smoke test, and module import check")
     return parser
+
+
+def _run_verify() -> int:
+    """Run a self-verification health check."""
+    import traceback as _tb
+
+    checks: list[tuple[str, str]] = []
+
+    # 1. Import all core modules
+    core_modules = [
+        "promptcompiler.analyzer",
+        "promptcompiler.compiler",
+        "promptcompiler.context_compression",
+        "promptcompiler.embeddings",
+        "promptcompiler.entities",
+        "promptcompiler.models",
+        "promptcompiler.nim",
+        "promptcompiler.policies",
+        "promptcompiler.semantic",
+        "promptcompiler.storage",
+        "promptcompiler.tokenizer",
+        "promptcompiler.v1",
+        "promptcompiler.lint",
+        "promptcompiler.cache",
+        "promptcompiler.runtime",
+    ]
+    for module_name in core_modules:
+        try:
+            __import__(module_name)
+            checks.append((f"import:{module_name}", "ok"))
+        except Exception as exc:  # noqa: BLE001
+            checks.append((f"import:{module_name}", f"FAIL: {exc}"))
+
+    # 2. NIM configuration check
+    try:
+        from .nim import nim_is_configured
+        nim_ok = nim_is_configured()
+        checks.append(("nvidia_nim_configured", "ok" if nim_ok else "not configured (optional)"))
+    except Exception as exc:
+        checks.append(("nvidia_nim_configured", f"FAIL: {exc}"))
+
+    # 3. Storage initialization check
+    try:
+        from .storage import SQLiteStore
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SQLiteStore(Path(tmp) / "verify.sqlite3")
+            store.record_trace({
+                "trace_id": "verify_tr",
+                "endpoint": "verify",
+                "provider": "local",
+                "model": "test",
+                "session_id": None,
+                "mode": "lossless",
+                "original_token_count": 1,
+                "optimized_token_count": 1,
+                "token_reduction_percent": 0.0,
+                "estimated_cost_before_usd": 0.0,
+                "estimated_cost_after_usd": 0.0,
+                "cache_status": "bypass",
+                "evaluation_status": "not_configured",
+                "zero_retention": True,
+                "latency_ms": 1,
+                "transformations": [],
+                "retention": {"raw_payload_stored": False},
+            })
+            store.close()
+        checks.append(("storage_init", "ok"))
+    except Exception as exc:
+        checks.append(("storage_init", f"FAIL: {exc}"))
+
+    # 4. Smoke test on a built-in sample
+    sample_prompt = (
+        "Analyze this code. Explain it. Optimize it. Write tests.\n"
+        "@pin CASE-123\n"
+        "The code handles user authentication for the support portal."
+    )
+    try:
+        result = smoke_test(sample_prompt, model=DEFAULT_NIM_MODEL, mode="balanced")
+        passed = len(result["passed"])
+        failed = len(result["failed"])
+        if failed:
+            checks.append(("smoke_test", f"FAILED ({failed} failures)"))
+        else:
+            checks.append(("smoke_test", f"ok ({passed} checks passed)"))
+    except Exception as exc:
+        checks.append(("smoke_test", f"FAIL: {exc}"))
+
+    # Print report
+    print("PromptCompiler verify report")
+    print("=" * 40)
+    max_len = max(len(k) for k, _ in checks)
+    for key, status in checks:
+        pad = " " * (max_len - len(key))
+        icon = "✅" if status == "ok" or "optional" in status or "checks" in status else "❌"
+        print(f"  {icon}  {key}{pad}  {status}")
+    print("=" * 40)
+
+    failures = [k for k, v in checks if v.startswith("FAIL")]
+    if failures:
+        print(f"FAILED: {len(failures)} check(s) — {' '.join(failures)}")
+        return 1
+    print("All checks passed.")
+    return 0
 
 
 def _start_server(host: str, port: int) -> None:

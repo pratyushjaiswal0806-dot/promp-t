@@ -1,4 +1,4 @@
-import { PageFrame, SectionBlock, pageActions, FeatureGrid } from "../components/PremiumPageLayout.jsx";
+import { PageFrame, SectionBlock, pageActions } from "../components/PremiumPageLayout.jsx";
 import { IconTile } from "../components/IconTile.jsx";
 import { platform } from "../content/platform.js";
 

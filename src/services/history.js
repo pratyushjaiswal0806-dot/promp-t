@@ -7,7 +7,8 @@ export function readHistory() {
   } catch { return []; }
 }
 
-export function saveToHistory(item) {
+export function saveToHistory(item, zeroRetention = false) {
+  if (zeroRetention) return readHistory();
   const next = [item, ...readHistory()].slice(0, 8);
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota */ }
   return next;

@@ -22,7 +22,6 @@ const DRAWER_TABS = [
 
 export function WorkbenchShell() {
   const {
-    metrics,
     entities,
     changes,
     lintFindings,

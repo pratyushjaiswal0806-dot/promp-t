@@ -1,5 +1,4 @@
 import { PageFrame, SectionBlock, pageActions } from "../components/PremiumPageLayout.jsx";
-import { IconTile } from "../components/IconTile.jsx";
 import { useCases } from "../content/useCases.js";
 
 export default function UseCasesPage({ onNavigate }) {

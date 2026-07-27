@@ -7,7 +7,7 @@ export function CodeSnippet({ code }) {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {}
+    } catch { /* clipboard not available */ }
   };
   return (
     <span className="code-snippet">

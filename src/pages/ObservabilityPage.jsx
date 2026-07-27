@@ -1,6 +1,5 @@
 import { PageFrame, SectionBlock, pageActions, FeatureGrid } from "../components/PremiumPageLayout.jsx";
 import { CodeBlock } from "../components/CodeBlock.jsx";
-import { FadeIn } from "../components/ui/FadeIn.jsx";
 import { observability } from "../content/observability.js";
 
 export default function ObservabilityPage({ onNavigate }) {

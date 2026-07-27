@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     outDir: "web",
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: process.env.SOURCEMAP === "true",
     rollupOptions: {
       output: {
         manualChunks: {

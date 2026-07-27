@@ -1,12 +1,14 @@
 """Storage abstraction layer for promptcompiler v2.
 
-This package re-exports the v1 SQLiteStore for backward compatibility while
+This package re-exports the SQLiteStore for backward compatibility while
 adding the new Repository Protocol-based abstraction.
 """
 
 from __future__ import annotations
 
-# Re-export v1 storage for backward compatibility
+# Re-export v1 storage (the storage.py module) via the shim
+# storage_v1.py uses importlib to safely resolve the name collision with
+# the storage/ package, avoiding a circular import.
 from promptcompiler.storage_v1 import (
     DEFAULT_DB_PATH,
     SQLiteStore,

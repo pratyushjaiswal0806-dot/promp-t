@@ -2,7 +2,7 @@ import { useWorkbench } from "./context/CompilerContext.jsx";
 import { DiffList } from "../components/DiffList.jsx";
 
 export function Inspector() {
-  const { segments, diffItems, semantic } = useWorkbench();
+  const { segments, diffItems } = useWorkbench();
   return (
     <>
       {segments.length > 0 && (

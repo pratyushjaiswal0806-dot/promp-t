@@ -8,6 +8,7 @@ import os
 import ssl
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 from typing import Any
 
 from .entities import extract_entities
@@ -50,6 +51,13 @@ class NimClient:
         if not api_key:
             raise NimConfigError("NVIDIA_API_KEY is not configured")
         base_url = os.environ.get("NVIDIA_NIM_BASE_URL", DEFAULT_NIM_BASE_URL).rstrip("/")
+        _allowed_hosts = {"integrate.api.nvidia.com", "api.nvidia.com"}
+        hostname = urlparse(base_url).hostname or ""
+        if hostname not in _allowed_hosts and os.environ.get("PROMPTCOMPILER_NIM_UNSAFE_URL") != "1":
+            raise NimConfigError(
+                f"NVIDIA_NIM_BASE_URL host '{hostname}' is not in the default allowlist. "
+                "Set PROMPTCOMPILER_NIM_UNSAFE_URL=1 only if you trust this endpoint."
+            )
         return cls(api_key=api_key, base_url=base_url)
 
     def build_summarize_payload(

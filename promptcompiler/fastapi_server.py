@@ -362,6 +362,14 @@ def run(host: str = "127.0.0.1", port: int = 8765) -> None:
         Port number (default 8765).
     """
     import uvicorn
+    import warnings
+
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        warnings.warn(
+            f"PromptCompiler is binding to a non-loopback address ({host}). "
+            "This exposes the API without authentication.",
+            stacklevel=2,
+        )
 
     uvicorn.run(app, host=host, port=port, log_level="info")
 

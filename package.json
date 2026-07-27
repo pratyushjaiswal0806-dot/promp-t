@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "lint": "git diff --check",
+    "lint": "eslint src/ --config eslint.config.mjs",
+    "verify": "npm run lint && npm run test:frontend",
+    "lint:python": "python3 -m ruff check promptcompiler/ tests/ --config ruff.toml || ruff check promptcompiler/ tests/ --config ruff.toml",
     "preview": "vite preview --host 127.0.0.1",
     "test": "npm run test:frontend",
     "test:frontend": "node --test tests/frontend_payload.test.mjs"
@@ -20,5 +22,11 @@
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.15.1",
     "vite": "^7.2.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.6.0"
   }
 }
